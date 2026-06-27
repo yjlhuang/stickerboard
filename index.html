@@ -92,6 +92,15 @@ input[type=range]{width:100%;accent-color:var(--primary);cursor:pointer}
 .chip{padding:4px 11px;background:var(--panel);border:1px solid var(--bd);border-radius:20px;font-size:12px;color:var(--muted);white-space:nowrap}
 .chip b{color:var(--text)}
 .chip.acc{background:var(--primary-bg);border-color:#C7D2FE;color:var(--primary)}
+/* ─ prompt helper ─ */
+.cg{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:9px}
+.cs{padding:4px 9px;border:1px solid var(--bd);border-radius:20px;font-size:11.5px;background:#fff;color:var(--muted);cursor:pointer;transition:all .12s;white-space:nowrap}
+.cs.on{background:var(--primary-bg);color:var(--primary);border-color:var(--primary);font-weight:500}
+.phout{width:100%;min-height:78px;padding:8px 10px;border:1px solid var(--bd);border-radius:var(--r);font-size:12px;color:var(--text);background:var(--bg);resize:none;outline:none;line-height:1.6;font-family:inherit}
+.cpbtn{width:100%;padding:8px;background:var(--primary-bg);color:var(--primary);border:1px solid #C7D2FE;border-radius:var(--r);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;margin-top:6px}
+.cpbtn:hover{background:var(--primary);color:#fff}
+.cpbtn.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+.tnote{font-size:11px;color:var(--muted);margin-top:5px;padding:5px 8px;background:var(--bg);border-radius:5px;line-height:1.5}
 /* ─ responsive ─ */
 @media(max-width:660px){
   body{height:auto;overflow-y:auto}
@@ -150,10 +159,39 @@ input[type=range]{width:100%;accent-color:var(--primary);cursor:pointer}
   </div>
 
   <!-- 圖片 -->
+  <!-- AI 生圖助手 -->
   <div class="sec">
-    <div class="sec-ttl" style="display:flex;justify-content:space-between;align-items:center">
-      圖片 <button class="tbtn" id="clearBtn" style="display:none" onclick="clearImgs()">清除全部</button>
+    <div class="sec-ttl">🤖 AI 生圖助手</div>
+    <label>主題（中英文皆可）</label>
+    <input type="text" id="phSubj" placeholder="例：戴眼鏡的貓咪 / 可愛蜜蜂 / 滿分獎勵章" style="margin-bottom:9px">
+    <label>風格</label>
+    <div class="cg" id="styCG">
+      <button class="cs on" data-sty="cartoon">🎨 卡通插圖</button>
+      <button class="cs" data-sty="watercolor">💧 水彩風</button>
+      <button class="cs" data-sty="ghibli">🌿 吉卜力</button>
+      <button class="cs" data-sty="minimal">✏️ 極簡線條</button>
+      <button class="cs" data-sty="realistic">📸 寫實風</button>
+      <button class="cs" data-sty="pixel">👾 像素風</button>
+      <button class="cs" data-sty="stamp">📮 復古印章</button>
     </div>
+    <label>AI 工具</label>
+    <div class="cg" id="toolCG">
+      <button class="cs on" data-tool="dalle">ChatGPT</button>
+      <button class="cs" data-tool="mj">Midjourney</button>
+      <button class="cs" data-tool="flux">Flux / SD</button>
+      <button class="cs" data-tool="other">通用</button>
+    </div>
+    <label>Prompt</label>
+    <textarea class="phout" id="phOut" readonly></textarea>
+    <button class="cpbtn" id="cpBtn" onclick="copyPH()">📋 複製 Prompt</button>
+    <div class="tnote" id="tnote"></div>
+    <div class="infobox" style="margin-top:6px">
+      ✓ 正方形 (1:1) &nbsp;✓ 主體置中 &nbsp;✓ 白色背景<br>
+      ✓ 建議最低 <b id="phMin">—</b>px，最佳 <b id="phBest">—</b>px 以上
+    </div>
+  </div>
+
+  <!-- 圖片 -->
     <div class="dz" id="dz">
       <div style="font-size:22px;margin-bottom:3px">⬆</div>
       <div style="font-size:13px">拖放圖片到此，或點擊上傳</div>
@@ -372,6 +410,8 @@ function updateUI(cv){
   } else rb.classList.add('hidden');
   // Image quality dots
   renderImgList(cv);
+  // Sync prompt helper recommended size
+  try{document.getElementById('phMin').textContent=cv.minRec;document.getElementById('phBest').textContent=cv.bestRec;}catch(e){}
 }
 
 // ══════════════════════════════════════════════════════════
@@ -456,6 +496,59 @@ async function download(){
 }
 
 // ══════════════════════════════════════════════════════════
+// AI PROMPT HELPER
+// ══════════════════════════════════════════════════════════
+const STYS={
+  cartoon:   'cute cartoon illustration, flat design, bold outlines',
+  watercolor:'watercolor painting style, soft pastel colors, artistic brushstrokes',
+  ghibli:    'Studio Ghibli inspired illustration, whimsical, warm colors',
+  minimal:   'minimal line art, simple clean illustration, few colors',
+  realistic: 'realistic, photographic style, highly detailed',
+  pixel:     '8-bit pixel art style, retro game sprite, crisp pixels',
+  stamp:     'vintage rubber stamp style, retro engraving, bold outline, monochrome',
+};
+const TPLS={
+  dalle:{
+    build:(s,st)=>`${s}, ${st}, white background, centered composition, no text, suitable for sticker printing, high resolution, square format`,
+    note:'⚠️ 在 DALL-E 介面點選「正方形 (1:1)」後再生圖，Prompt 本身不需加 --ar',
+  },
+  mj:{
+    build:(s,st)=>`${s}, ${st}, white background, centered composition, sticker design, clean edges --ar 1:1 --v 6`,
+    note:'✓ --ar 1:1 已包含在 Prompt 中，直接貼上即可',
+  },
+  flux:{
+    build:(s,st)=>`${s}, ${st}, white background, centered subject, isolated on white, high resolution`,
+    note:'⚠️ 在介面設定 Width = Height（如 1024×1024）輸出正方形',
+  },
+  other:{
+    build:(s,st)=>`${s}, ${st}, white background, centered subject with clear margins, suitable for sticker printing, square format`,
+    note:'⚠️ 生圖後記得在介面選擇 1:1 正方形輸出',
+  },
+};
+let phSty='cartoon', phTool='dalle';
+function buildPH(){
+  const subj=document.getElementById('phSubj').value.trim()||'[你的主題]';
+  const t=TPLS[phTool];
+  document.getElementById('phOut').value=t.build(subj,STYS[phSty]);
+  document.getElementById('tnote').textContent=t.note;
+}
+function copyPH(){
+  const text=document.getElementById('phOut').value,btn=document.getElementById('cpBtn');
+  const ok=()=>{btn.textContent='✓ 已複製！';btn.className='cpbtn ok';setTimeout(()=>{btn.textContent='📋 複製 Prompt';btn.className='cpbtn';},2000);};
+  if(navigator.clipboard){navigator.clipboard.writeText(text).then(ok).catch(()=>{document.getElementById('phOut').select();document.execCommand('copy');ok();});}
+  else{document.getElementById('phOut').select();document.execCommand('copy');ok();}
+}
+document.querySelectorAll('[data-sty]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('[data-sty]').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');phSty=b.dataset.sty;buildPH();
+}));
+document.querySelectorAll('[data-tool]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('[data-tool]').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');phTool=b.dataset.tool;buildPH();
+}));
+document.getElementById('phSubj').addEventListener('input',buildPH);
+
+// ══════════════════════════════════════════════════════════
 // EVENT BINDINGS
 // ══════════════════════════════════════════════════════════
 // Preset
@@ -532,6 +625,7 @@ new ResizeObserver(()=>schedule()).observe(document.querySelector('.pv'));
 
 // Init
 refresh();
+buildPH();
 </script>
 </body>
 </html>
