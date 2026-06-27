@@ -116,6 +116,26 @@ input[type=range]{width:100%;accent-color:var(--primary);cursor:pointer}
 .tip-body b{color:var(--text)}
 .tapbtn{display:inline-block;margin-top:5px;padding:3px 10px;background:var(--primary);color:#fff;border:none;border-radius:5px;font-size:11.5px;font-weight:600;cursor:pointer;transition:background .12s}
 .tapbtn:hover{background:#4444D4}
+/* ─ modal ─ */
+.moval{position:fixed;inset:0;background:rgba(15,15,25,.52);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(2px)}
+.mcard{background:#fff;border-radius:20px;padding:28px 24px 22px;max-width:356px;width:100%;box-shadow:0 24px 64px rgba(0,0,0,.22);position:relative}
+.mcard-x{position:absolute;top:14px;right:16px;background:none;border:none;font-size:18px;color:var(--hint);cursor:pointer;line-height:1;padding:4px 6px}
+.mcard-x:hover{color:var(--text)}
+.mcard-ttl{font-size:20px;font-weight:700;margin-bottom:2px}
+.mcard-sub{font-size:12px;color:var(--muted);margin-bottom:18px}
+.mtip{display:flex;gap:12px;align-items:flex-start;margin-bottom:13px}
+.mtip:last-child{margin-bottom:0}
+.mtip-ico{font-size:22px;width:28px;flex-shrink:0;text-align:center}
+.mtip-body{font-size:13px;line-height:1.55;color:var(--muted)}
+.mtip-body b{color:var(--text);display:block;margin-bottom:1px}
+.mcard-cta{width:100%;padding:13px;background:var(--primary);color:#fff;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;margin-top:20px;transition:background .15s}
+.mcard-cta:hover{background:#4444D4}
+.help-btn{margin-left:auto;padding:5px 10px;border:1px solid var(--bd);border-radius:6px;background:var(--bg);color:var(--muted);font-size:12px;cursor:pointer;transition:all .12s;flex-shrink:0}
+.help-btn:hover{border-color:var(--primary);color:var(--primary);background:var(--primary-bg)}
+@media(max-width:460px){
+  .mcard{border-radius:18px 18px 0 0;padding:22px 18px 20px;position:fixed;bottom:0;left:0;right:0;max-width:100%}
+  .moval{align-items:flex-end;padding:0}
+}
 /* ─ responsive ─ */
 @media(max-width:660px){
   body{height:auto;overflow-y:auto}
@@ -130,6 +150,7 @@ input[type=range]{width:100%;accent-color:var(--primary);cursor:pointer}
 <header>
   <div class="brand">Sticker<span>Board</span></div>
   <div class="tagline">AI 貼紙排版工具</div>
+  <button class="help-btn" onclick="openModal()">💡 教學</button>
 </header>
 <div class="app">
 <aside class="panel">
@@ -246,7 +267,7 @@ input[type=range]{width:100%;accent-color:var(--primary);cursor:pointer}
       <button class="opt" data-pad="3">3mm</button>
       <button class="opt" data-pad="5">5mm</button>
     </div>
-    <label>圓角半徑</label>
+    <label>圓角半徑 <span style="font-weight:400;color:var(--hint);font-size:11px">（拉到 50% → ⭕ 圓形貼紙）</span></label>
     <div class="slrow">
       <input type="range" id="cr" min="0" max="50" value="0" step="1">
       <span class="slval" id="crV">0%</span>
@@ -277,47 +298,6 @@ input[type=range]{width:100%;accent-color:var(--primary);cursor:pointer}
     <button class="dlbtn" id="dlBtn" onclick="download()">↓ 下載 PNG</button>
     <div style="text-align:center;font-size:11px;color:var(--hint);margin-top:6px" id="dlHint"></div>
   </div>
-  <!-- 新手攻略 -->
-  <div class="sec">
-    <div class="sec-ttl">✨ 新手攻略</div>
-    <div class="tip">
-      <div class="tip-ico">⭕</div>
-      <div class="tip-body">
-        <b>想要圓形貼紙？</b><br>
-        把「圓角半徑」拉到 50%，方形格子就變成圓形！<br>
-        <button class="tapbtn" onclick="applyCircle()">立即套用 →</button>
-      </div>
-    </div>
-    <div class="tip">
-      <div class="tip-ico">🖨️</div>
-      <div class="tip-body">
-        <b>怎麼去 7-11 印？</b><br>
-        下載 PNG → ibon App → 相片列印 → 貼紙相紙 → 4×6 英吋，上傳圖片後到門市掃碼取件
-      </div>
-    </div>
-    <div class="tip">
-      <div class="tip-ico">✂️</div>
-      <div class="tip-body">
-        <b>怎麼裁切？</b><br>
-        印出來後沿虛線用剪刀剪，就能得到一枚枚獨立貼紙
-      </div>
-    </div>
-    <div class="tip">
-      <div class="tip-ico">🖼️</div>
-      <div class="tip-body">
-        <b>可以放多張圖嗎？</b><br>
-        可以！上傳多張圖後會依序循環填滿格子，↑↓ 調整出場順序
-      </div>
-    </div>
-    <div class="tip">
-      <div class="tip-ico">🟢</div>
-      <div class="tip-body">
-        <b>品質燈號是什麼？</b><br>
-        🟢 印刷清晰 &nbsp;🟡 勉強可印 &nbsp;🔴 可能模糊<br>
-        燈號會隨貼紙尺寸設定即時更新
-      </div>
-    </div>
-  </div>
 
 </aside>
 
@@ -325,6 +305,28 @@ input[type=range]{width:100%;accent-color:var(--primary);cursor:pointer}
   <div class="cvwrap"><canvas id="pvCanvas"></canvas></div>
   <div class="stats" id="statRow"></div>
 </main>
+</div>
+
+<!-- Welcome Modal -->
+<div class="moval" id="moval" onclick="handleModalBg(event)">
+  <div class="mcard">
+    <button class="mcard-x" onclick="closeModal()" aria-label="關閉">✕</button>
+    <div class="mcard-ttl">歡迎 👋</div>
+    <div class="mcard-sub">3 件事，馬上上手 StickerBoard</div>
+    <div class="mtip">
+      <div class="mtip-ico">⭕</div>
+      <div class="mtip-body"><b>想做圓形貼紙？</b>把「圓角半徑」拉到 50%，方形格子秒變圓形</div>
+    </div>
+    <div class="mtip">
+      <div class="mtip-ico">🤖</div>
+      <div class="mtip-body"><b>還沒有圖？</b>用左邊「AI 生圖助手」→ 填入主題 → 複製 Prompt → 貼到 ChatGPT 或 Gemini 生圖再上傳</div>
+    </div>
+    <div class="mtip">
+      <div class="mtip-ico">🖨️</div>
+      <div class="mtip-body"><b>想印出來？</b>下載 PNG → 7-11 ibon App → 相片列印 → 貼紙相紙 4×6 英吋</div>
+    </div>
+    <button class="mcard-cta" onclick="closeModal()">開始製作 →</button>
+  </div>
 </div>
 
 <script>
@@ -673,6 +675,11 @@ function applyCircle(){
   schedule();
   document.getElementById('cr').scrollIntoView({behavior:'smooth',block:'center'});
 }
+// Modal
+function openModal(){document.getElementById('moval').style.display='flex';}
+function closeModal(){document.getElementById('moval').style.display='none';}
+function handleModalBg(e){if(e.target===document.getElementById('moval'))closeModal();}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
 // Preset
 document.querySelectorAll('[data-p]').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('[data-p]').forEach(x=>x.classList.remove('on'));
