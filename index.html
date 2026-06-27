@@ -132,6 +132,24 @@ input[type=range]{width:100%;accent-color:var(--primary);cursor:pointer}
 .mcard-cta:hover{background:#4444D4}
 .help-btn{margin-left:auto;padding:5px 10px;border:1px solid var(--bd);border-radius:6px;background:var(--bg);color:var(--muted);font-size:12px;cursor:pointer;transition:all .12s;flex-shrink:0}
 .help-btn:hover{border-color:var(--primary);color:var(--primary);background:var(--primary-bg)}
+/* ─ sponsor ─ */
+.sp-btn{margin-left:6px;padding:5px 10px;border:1px solid #F59E0B;border-radius:6px;background:#FFFBEB;color:#92400E;font-size:12px;cursor:pointer;transition:all .12s;flex-shrink:0}
+.sp-btn:hover{background:#FEF3C7}
+.soval{position:fixed;inset:0;background:rgba(15,15,25,.4);z-index:300;display:none;align-items:center;justify-content:center;padding:20px}
+.soval.open{display:flex}
+.scard{background:#fff;border-radius:16px;padding:22px 20px 18px;max-width:292px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,.18);position:relative;text-align:center}
+.scard-x{position:absolute;top:12px;right:14px;background:none;border:none;font-size:16px;color:var(--hint);cursor:pointer;padding:3px 5px;line-height:1}
+.scard-x:hover{color:var(--text)}
+.scard-ttl{font-size:17px;font-weight:700;margin-bottom:3px}
+.scard-sub{font-size:12px;color:var(--muted);margin-bottom:16px}
+.slink{display:flex;align-items:center;gap:10px;padding:11px 14px;border:1px solid var(--bd);border-radius:10px;text-decoration:none;color:var(--text);font-size:13px;font-weight:500;transition:background .12s;margin-bottom:8px;text-align:left}
+.slink:last-child{margin-bottom:0}
+.slink:hover{background:var(--bg)}
+.slink-ico{font-size:20px;flex-shrink:0}
+@keyframes fdin{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:translateY(0)}}
+.dl-thx{font-size:11.5px;text-align:center;color:var(--muted);margin-top:7px;display:none;animation:fdin .5s ease}
+.dl-thx a{color:#92400E;text-decoration:none;font-weight:500}
+.dl-thx a:hover{text-decoration:underline}
 @media(max-width:460px){
   .mcard{border-radius:18px 18px 0 0;padding:22px 18px 20px;position:fixed;bottom:0;left:0;right:0;max-width:100%}
   .moval{align-items:flex-end;padding:0}
@@ -151,6 +169,7 @@ input[type=range]{width:100%;accent-color:var(--primary);cursor:pointer}
   <div class="brand">Sticker<span>Board</span></div>
   <div class="tagline">AI 貼紙排版工具</div>
   <button class="help-btn" onclick="openModal()">💡 教學</button>
+  <button class="sp-btn" onclick="openSponsor()">☕ 贊助</button>
 </header>
 <div class="app">
 <aside class="panel">
@@ -272,7 +291,7 @@ input[type=range]{width:100%;accent-color:var(--primary);cursor:pointer}
       <input type="range" id="cr" min="0" max="50" value="0" step="1">
       <span class="slval" id="crV">0%</span>
     </div>
-    <label>格子背景色</label>
+    <label>格子背景色 <span style="font-size:11px;color:var(--hint)">(需上傳去背透明圖才能透出底色)</span></label>
     <div class="clrow">
       <label class="cpick" title="自訂色">
         <input type="color" id="bgPick" value="#ffffff">
@@ -297,6 +316,7 @@ input[type=range]{width:100%;accent-color:var(--primary);cursor:pointer}
     </div>
     <button class="dlbtn" id="dlBtn" onclick="download()">↓ 下載 PNG</button>
     <div style="text-align:center;font-size:11px;color:var(--hint);margin-top:6px" id="dlHint"></div>
+    <div class="dl-thx" id="dlThx">如果這個工具幫到你，歡迎 <a href="#" onclick="openSponsor();return false">請 Doe 喝杯咖啡 ☕</a></div>
   </div>
 
 </aside>
@@ -312,7 +332,7 @@ input[type=range]{width:100%;accent-color:var(--primary);cursor:pointer}
   <div class="mcard">
     <button class="mcard-x" onclick="closeModal()" aria-label="關閉">✕</button>
     <div class="mcard-ttl">歡迎 👋</div>
-    <div class="mcard-sub">3 件事，馬上上手 StickerBoard</div>
+    <div class="mcard-sub">4 件事，馬上上手 StickerBoard</div>
     <div class="mtip">
       <div class="mtip-ico">⭕</div>
       <div class="mtip-body"><b>想做圓形貼紙？</b>把「圓角半徑」拉到 50%，方形格子秒變圓形</div>
@@ -322,10 +342,31 @@ input[type=range]{width:100%;accent-color:var(--primary);cursor:pointer}
       <div class="mtip-body"><b>還沒有圖？</b>用左邊「AI 生圖助手」→ 填入主題 → 複製 Prompt → 貼到 ChatGPT 或 Gemini 生圖再上傳</div>
     </div>
     <div class="mtip">
+      <div class="mtip-ico">🪄</div>
+      <div class="mtip-body"><b>底色透不出來？</b>AI 生圖預設有白底，需先去背才能透出自訂底色。手機可長按圖片主體複製，或用 remove.bg 等免費工具去背再上傳</div>
+    </div>
+    <div class="mtip">
       <div class="mtip-ico">🖨️</div>
       <div class="mtip-body"><b>想印出來？</b>下載 PNG → 7-11 ibon App → 相片列印 → 貼紙相紙 4×6 英吋</div>
     </div>
     <button class="mcard-cta" onclick="closeModal()">開始製作 →</button>
+  </div>
+</div>
+
+<!-- Sponsor Modal -->
+<div class="soval" id="soval" onclick="handleSponsorBg(event)">
+  <div class="scard">
+    <button class="scard-x" onclick="closeSponsor()" aria-label="關閉">✕</button>
+    <div class="scard-ttl">☕ 請 Doe 喝杯咖啡</div>
+    <div class="scard-sub">喜歡這個工具的話，小額贊助讓我繼續優化 ✨</div>
+    <a class="slink" href="#" target="_blank" rel="noopener">
+      <span class="slink-ico">🇹🇼</span>
+      <span>台灣在地贊助（綠界科技）</span>
+    </a>
+    <a class="slink" href="#" target="_blank" rel="noopener">
+      <span class="slink-ico">☕</span>
+      <span>國際贊助（Buy Me a Coffee）</span>
+    </a>
   </div>
 </div>
 
@@ -558,7 +599,9 @@ async function download(){
       },'image/png');
     });
     btn.className='dlbtn done';btn.textContent='✓ 下載完成！';
-    setTimeout(()=>{btn.className='dlbtn';btn.disabled=false;btn.textContent='↓ 下載 PNG';},3000);
+    const thx=document.getElementById('dlThx');
+    thx.style.display='block';
+    setTimeout(()=>{btn.className='dlbtn';btn.disabled=false;btn.textContent='↓ 下載 PNG';thx.style.display='none';},5000);
   }catch(e){console.error(e);btn.disabled=false;btn.textContent='↓ 下載 PNG';}
 }
 
@@ -688,7 +731,11 @@ function applyCircle(){
 function openModal(){document.getElementById('moval').style.display='flex';}
 function closeModal(){document.getElementById('moval').style.display='none';}
 function handleModalBg(e){if(e.target===document.getElementById('moval'))closeModal();}
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+// Sponsor
+function openSponsor(){document.getElementById('soval').classList.add('open');}
+function closeSponsor(){document.getElementById('soval').classList.remove('open');}
+function handleSponsorBg(e){if(e.target===document.getElementById('soval'))closeSponsor();}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeModal();closeSponsor();}});
 // Preset
 document.querySelectorAll('[data-p]').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('[data-p]').forEach(x=>x.classList.remove('on'));
