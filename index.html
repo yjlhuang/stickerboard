@@ -651,8 +651,17 @@ function buildPH(){
 function copyPH(){
   const text=document.getElementById('phOut').value,btn=document.getElementById('cpBtn');
   const ok=()=>{btn.textContent='✓ 已複製！';btn.className='cpbtn ok';setTimeout(()=>{btn.textContent='📋 複製 Prompt';btn.className='cpbtn';},2000);};
-  if(navigator.clipboard){navigator.clipboard.writeText(text).then(ok).catch(()=>{document.getElementById('phOut').select();document.execCommand('copy');ok();});}
-  else{document.getElementById('phOut').select();document.execCommand('copy');ok();}
+  const fallback=()=>{
+    const ta=document.getElementById('phOut');
+    ta.select();
+    try{document.execCommand('copy');ok();}
+    catch(e){alert('瀏覽器阻擋複製，請手動全選複製喔！');}
+  };
+  if(navigator.clipboard&&window.isSecureContext){
+    navigator.clipboard.writeText(text).then(ok).catch(fallback);
+  }else{
+    fallback();
+  }
 }
 document.querySelectorAll('[data-sty]').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('[data-sty]').forEach(x=>x.classList.remove('on'));
