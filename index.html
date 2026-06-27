@@ -85,7 +85,7 @@ input[type=range]{width:100%;accent-color:var(--primary);cursor:pointer}
 .dlbtn:disabled{background:#A5B4FC;cursor:not-allowed}
 .dlbtn.done{background:var(--ok)}
 /* ─ preview area ─ */
-.pv{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px 16px;overflow:auto;gap:14px}
+.pv{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px 16px;overflow:auto;gap:10px}
 .cvwrap{border-radius:3px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08),0 8px 32px rgba(0,0,0,.07);background:#fff;flex-shrink:0}
 #pvCanvas{display:block;max-width:100%;max-height:calc(100dvh - 140px)}
 .stats{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
@@ -160,7 +160,6 @@ input[type=range]{width:100%;accent-color:var(--primary);cursor:pointer}
   .app{flex-direction:column;overflow:visible}
   .panel{width:100%;overflow:visible;border-right:none;border-bottom:1px solid var(--bd)}
   .pv{min-height:50vw;padding:12px}
-  #pvCanvas{max-height:70vw}
 }
 </style>
 </head>
@@ -486,9 +485,14 @@ function schedule(){clearTimeout(rvTimer);rvTimer=setTimeout(refresh,90);}
 function refresh(){
   const cv=C();
   const pa=document.querySelector('.pv');
-  const mW=Math.max(80,pa.clientWidth-32),mH=Math.max(80,pa.clientHeight-80);
-  const s=Math.min(mW/cv.cW,mH/cv.cH,1);
-  renderCanvas(pvCanvas,cv,s);
+  const mW=Math.max(80,pa.clientWidth-32);
+  const mH=Math.max(80,pa.clientHeight-90); // 90 = stats row + gap
+  const visS=Math.min(mW/cv.cW,mH/cv.cH,1);
+  // DPR compensation: render at device pixel density → sharp on Retina/3x screens
+  const dpr=Math.min(window.devicePixelRatio||1,3);
+  renderCanvas(pvCanvas,cv,visS*dpr);
+  pvCanvas.style.width=Math.round(cv.cW*visS)+'px';
+  pvCanvas.style.height=Math.round(cv.cH*visS)+'px';
   updateUI(cv);
 }
 function pvScale(){const cv=C(),pa=document.querySelector('.pv');return Math.min((pa.clientWidth-32)/cv.cW,(pa.clientHeight-80)/cv.cH,1);}
@@ -628,12 +632,13 @@ const BASE={
 };
 
 // Photo-reference prompt builders
+// subject (s) is optional in photo ref mode — filter(Boolean) drops empty string
 const PHOTO={
-  other:  (s,st)=>`Based on the uploaded photo, transform the subject into the following style: ${s}, ${st}, die-cut sticker design, isolated on pure white background, centered composition, clear solid outlines, no text, square format`,
-  dalle:  (s,st)=>`Please analyze the attached photo and generate a sticker based on the subject's key features (hair, clothing, accessories, face style). ${s}, ${st}, die-cut sticker design, isolated on pure white background, centered composition, clear solid outlines, no text, square format`,
-  gemini: (s,st)=>`Please analyze the attached photo and generate a sticker based on the subject's key features (hair, clothing, accessories, face style). ${s}, ${st}, die-cut sticker design, isolated on a pure white background, centered composition, clear solid outlines, no text`,
-  mj:     (s,st)=>`${s}, ${st}, die-cut sticker design, isolated on pure white background, centered composition, clear solid outlines --ar 1:1 --v 6 --cref [貼上照片網址]`,
-  flux:   (s,st)=>`Based on the uploaded reference photo, transform the subject into: ${s}, ${st}, die-cut sticker design, isolated on pure white background, centered subject, high resolution`,
+  other:  (s,st)=>{const d=[s,st].filter(Boolean).join(', ');return `Based on the uploaded photo, transform the subject into the following style: ${d}, die-cut sticker design, isolated on pure white background, centered composition, clear solid outlines, no text, square format`;},
+  dalle:  (s,st)=>{const d=[s,st].filter(Boolean).join(', ');return `Please analyze the attached photo and generate a sticker based on the subject's key features (hair, clothing, accessories, face style). ${d}, die-cut sticker design, isolated on pure white background, centered composition, clear solid outlines, no text, square format`;},
+  gemini: (s,st)=>{const d=[s,st].filter(Boolean).join(', ');return `Please analyze the attached photo and generate a sticker based on the subject's key features (hair, clothing, accessories, face style). ${d}, die-cut sticker design, isolated on a pure white background, centered composition, clear solid outlines, no text`;},
+  mj:     (s,st)=>{const d=[s,st].filter(Boolean).join(', ');return `${d}, die-cut sticker design, isolated on pure white background, centered composition, clear solid outlines --ar 1:1 --v 6 --cref [貼上照片網址]`;},
+  flux:   (s,st)=>{const d=[s,st].filter(Boolean).join(', ');return `Based on the uploaded reference photo, transform the subject into: ${d}, die-cut sticker design, isolated on pure white background, centered subject, high resolution`;},
 };
 
 // Tool notes
@@ -667,18 +672,25 @@ let phSty='cartoon', phTool='other', phPhotoRef=false;
 
 function togglePhotoRef(){
   const cb=document.getElementById('photoRef');
-  // If called from label click, checkbox may not have toggled yet; sync from DOM state after a tick
   setTimeout(()=>{
     phPhotoRef=cb.checked;
     document.getElementById('prefRow').classList.toggle('on',phPhotoRef);
+    // Reflect optional vs required state in the input placeholder
+    document.getElementById('phSubj').placeholder=phPhotoRef
+      ?'補充說明（可選）例：穿和服的我、我的貓'
+      :'例：戴眼鏡的貓咪 / 可愛蜜蜂 / 滿分獎勵章';
     buildPH();
   },0);
 }
 
 function buildPH(){
-  const subj=document.getElementById('phSubj').value.trim()||'[你的主題]';
+  const rawSubj=document.getElementById('phSubj').value.trim();
+  // Photo ref mode: subject is optional context — pass as-is (can be empty)
+  // Normal mode: fall back to '[你的主題]' so user knows the field is needed
+  const subj=phPhotoRef ? rawSubj : (rawSubj||'[你的主題]');
   const st=STYS[phSty];
-  const prompt=phPhotoRef ? PHOTO[phTool](subj,st) : BASE[phTool](subj,st);
+  // Photo mode uses its own builder that handles empty subject cleanly
+  const prompt=phPhotoRef ? buildPhotoPrompt(phTool,subj,st) : BASE[phTool](subj,st);
   document.getElementById('phOut').value=prompt;
   const noteEl=document.getElementById('tnote');
   const pnoteEl=document.getElementById('pnote');
@@ -689,6 +701,20 @@ function buildPH(){
   } else {
     pnoteEl.classList.remove('show');
   }
+}
+
+// Photo prompt builder — subject is optional: adds it with a trailing comma only if non-empty,
+// so the prompt never starts with an awkward ", cartoon illustration..." when left blank.
+function buildPhotoPrompt(tool,subj,st){
+  const sp=subj?`${subj}, `:'';
+  const m={
+    other:  `Based on the uploaded photo, transform the subject into the following style: ${sp}${st}, die-cut sticker design, isolated on pure white background, centered composition, clear solid outlines, no text, square format`,
+    dalle:  `Please analyze the attached photo and generate a sticker based on the subject's key features (hair, clothing, accessories, face style). ${sp}${st}, die-cut sticker design, isolated on pure white background, centered composition, clear solid outlines, no text, square format`,
+    gemini: `Please analyze the attached photo and generate a sticker based on the subject's key features (hair, clothing, accessories, face style). ${sp}${st}, die-cut sticker design, isolated on a pure white background, centered composition, clear solid outlines, no text`,
+    mj:     `${sp}${st}, die-cut sticker design, isolated on pure white background, centered composition, clear solid outlines --ar 1:1 --v 6 --cref [貼上照片網址]`,
+    flux:   `Based on the uploaded reference photo, transform the subject into: ${sp}${st}, die-cut sticker design, isolated on pure white background, centered subject, high resolution`,
+  };
+  return m[tool]||m.other;
 }
 
 function copyPH(){
