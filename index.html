@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>StickerBoard — AI 貼紙排版工具</title>
+<style>
+:root{
+  --bg:#F2F3F7;--panel:#FFFFFF;--bd:#E4E6EE;--primary:#5655F5;
+  --primary-bg:#EDEDFE;--text:#1C1C2E;--muted:#6B7280;--hint:#9CA3AF;
+  --ok:#10B981;--warn:#F59E0B;--err:#EF4444;--r:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;font-size:13px;color:var(--text);background:var(--bg);height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+/* ─ header ─ */
+header{display:flex;align-items:center;gap:10px;padding:9px 16px;background:var(--panel);border-bottom:1px solid var(--bd);flex-shrink:0;z-index:10}
+.brand{font-size:15px;font-weight:700;letter-spacing:-.3px}
+.brand span{color:var(--primary)}
+.tagline{font-size:12px;color:var(--muted)}
+/* ─ layout ─ */
+.app{display:flex;flex:1;overflow:hidden}
+/* ─ panel ─ */
+.panel{width:272px;flex-shrink:0;background:var(--panel);border-right:1px solid var(--bd);overflow-y:auto;overflow-x:hidden}
+.sec{padding:14px 15px;border-bottom:1px solid var(--bd)}
+.sec-ttl{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}
+/* ─ form ─ */
+label{display:block;font-size:11.5px;color:var(--muted);margin-bottom:4px}
+input[type=number],input[type=text]{width:100%;padding:6px 8px;border:1px solid var(--bd);border-radius:var(--r);font-size:13px;color:var(--text);outline:none;background:#fff}
+input[type=number]:focus,input[type=text]:focus{border-color:var(--primary)}
+input[type=range]{width:100%;accent-color:var(--primary);cursor:pointer}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.hidden{display:none!important}
+/* ─ preset buttons ─ */
+.pbrow{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:2px}
+.pb{padding:5px 9px;border-radius:6px;border:1px solid var(--bd);background:#fff;font-size:12px;color:var(--text);cursor:pointer;transition:all .12s}
+.pb.on{background:var(--primary);color:#fff;border-color:var(--primary)}
+/* ─ tab toggle ─ */
+.tabs{display:flex;background:var(--bg);border-radius:7px;padding:2px;margin-bottom:10px}
+.tab{flex:1;padding:5px 6px;border:none;border-radius:5px;font-size:12px;background:transparent;color:var(--muted);cursor:pointer;transition:all .12s;white-space:nowrap}
+.tab.on{background:#fff;color:var(--text);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.1)}
+/* ─ option buttons ─ */
+.optrow{display:flex;gap:5px;margin-bottom:10px}
+.opt{flex:1;padding:5px 4px;border:1px solid var(--bd);border-radius:6px;background:#fff;color:var(--muted);font-size:12px;cursor:pointer;text-align:center;transition:all .12s}
+.opt.on{background:var(--primary-bg);color:var(--primary);border-color:var(--primary);font-weight:600}
+/* ─ info box ─ */
+.infobox{padding:8px 10px;background:var(--bg);border-radius:6px;font-size:12px;color:var(--muted);line-height:1.65;margin-top:8px}
+.infobox b{color:var(--text)}
+/* ─ slider row ─ */
+.slrow{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.slval{min-width:30px;text-align:right;font-size:12px;font-weight:600;color:var(--text)}
+/* ─ dropzone ─ */
+.dz{border:2px dashed var(--bd);border-radius:var(--r);padding:15px 12px;text-align:center;cursor:pointer;transition:all .15s;color:var(--muted);line-height:1.6}
+.dz:hover,.dz.over{border-color:var(--primary);background:var(--primary-bg);color:var(--primary)}
+.dz input{display:none}
+/* ─ image list ─ */
+.imglist{display:flex;flex-direction:column;gap:5px;margin-top:8px}
+.imgitem{display:flex;align-items:center;gap:7px;padding:6px 7px;background:var(--bg);border-radius:7px;border:1px solid var(--bd)}
+.imgthumb{width:34px;height:34px;border-radius:5px;object-fit:cover;flex-shrink:0;background:#eee}
+.imginfo{flex:1;min-width:0}
+.imgname{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.imgmeta{font-size:11px;color:var(--muted);margin-top:1px}
+.qdot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.qg{background:var(--ok)}.qy{background:var(--warn)}.qr{background:var(--err)}
+.imgacts{display:flex;gap:3px;flex-shrink:0}
+.ab{width:22px;height:22px;border:none;border-radius:4px;background:transparent;color:var(--muted);cursor:pointer;font-size:13px;line-height:1;transition:background .1s;display:flex;align-items:center;justify-content:center}
+.ab:hover{background:var(--bd);color:var(--text)}
+.ab.d:hover{background:#FEE2E2;color:var(--err)}
+.ab:disabled{opacity:.25;cursor:default}
+/* ─ warnings ─ */
+.warn{padding:7px 10px;background:#FEF3C7;border:1px solid #F59E0B;border-radius:6px;font-size:11.5px;color:#92400E;margin-top:6px;line-height:1.5}
+.recbox{padding:8px 10px;background:#EEF2FF;border:1px solid #C7D2FE;border-radius:6px;font-size:12px;line-height:1.7;margin-top:8px}
+/* ─ color row ─ */
+.clrow{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.cpick{width:26px;height:26px;border-radius:6px;border:1px solid var(--bd);overflow:hidden;cursor:pointer;flex-shrink:0;padding:0}
+.cpick input{width:140%;height:140%;margin:-20%;padding:0;border:none;cursor:pointer;transform-origin:0 0}
+.csw{width:24px;height:24px;border-radius:5px;border:2px solid transparent;cursor:pointer;transition:border-color .12s;flex-shrink:0}
+.csw.on{border-color:var(--primary)}
+.checker{background:repeating-conic-gradient(#D1D5DB 0% 25%,#fff 0% 50%) 0 0/10px 10px}
+/* ─ text button ─ */
+.tbtn{background:none;border:none;font-size:11.5px;color:var(--hint);cursor:pointer;padding:0}
+.tbtn:hover{color:var(--err)}
+/* ─ download btn ─ */
+.dlbtn{width:100%;padding:11px;background:var(--primary);color:#fff;border:none;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;transition:background .15s;letter-spacing:.1px}
+.dlbtn:hover{background:#4444E0}
+.dlbtn:disabled{background:#A5B4FC;cursor:not-allowed}
+.dlbtn.done{background:var(--ok)}
+/* ─ preview area ─ */
+.pv{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px 16px;overflow:auto;gap:14px}
+.cvwrap{border-radius:3px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.08),0 8px 32px rgba(0,0,0,.07);background:#fff;flex-shrink:0}
+#pvCanvas{display:block;max-width:100%;max-height:calc(100dvh - 140px)}
+.stats{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.chip{padding:4px 11px;background:var(--panel);border:1px solid var(--bd);border-radius:20px;font-size:12px;color:var(--muted);white-space:nowrap}
+.chip b{color:var(--text)}
+.chip.acc{background:var(--primary-bg);border-color:#C7D2FE;color:var(--primary)}
+/* ─ responsive ─ */
+@media(max-width:660px){
+  body{height:auto;overflow-y:auto}
+  .app{flex-direction:column;overflow:visible}
+  .panel{width:100%;overflow:visible;border-right:none;border-bottom:1px solid var(--bd)}
+  .pv{min-height:50vw;padding:12px}
+  #pvCanvas{max-height:70vw}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">Sticker<span>Board</span></div>
+  <div class="tagline">AI 貼紙排版工具</div>
+</header>
+<div class="app">
+<aside class="panel">
+
+  <!-- 畫布 -->
+  <div class="sec">
+    <div class="sec-ttl">畫布</div>
+    <div class="pbrow" id="presetRow">
+      <button class="pb on" data-p="711">7-11 ibon 4×6"</button>
+      <button class="pb" data-p="a4">A4</button>
+      <button class="pb" data-p="custom">自訂</button>
+    </div>
+    <div id="customSz" class="hidden" style="margin-top:9px">
+      <div class="row2">
+        <div><label>寬 (mm)</label><input type="number" id="cW" value="100" min="20" max="1500"></div>
+        <div><label>高 (mm)</label><input type="number" id="cH" value="150" min="20" max="2000"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 排版 -->
+  <div class="sec">
+    <div class="sec-ttl">排版</div>
+    <div class="tabs" id="modeTabs">
+      <button class="tab on" data-m="sticker">固定貼紙尺寸</button>
+      <button class="tab" data-m="grid">固定格數</button>
+    </div>
+    <div id="sMode">
+      <div class="row2">
+        <div><label>貼紙寬 (cm)</label><input type="number" id="sW" value="3" min="0.5" max="30" step="0.5"></div>
+        <div><label>貼紙高 (cm)</label><input type="number" id="sH" value="3" min="0.5" max="30" step="0.5"></div>
+      </div>
+    </div>
+    <div id="gMode" class="hidden">
+      <div class="row2">
+        <div><label>欄數（橫）</label><input type="number" id="gC" value="3" min="1" max="30"></div>
+        <div><label>列數（縱）</label><input type="number" id="gR" value="5" min="1" max="30"></div>
+      </div>
+    </div>
+    <div><label>格子間距 (mm)</label><input type="number" id="sp" value="2" min="0" max="30" step="0.5"></div>
+    <div class="infobox" id="layInfo">計算中…</div>
+  </div>
+
+  <!-- 圖片 -->
+  <div class="sec">
+    <div class="sec-ttl" style="display:flex;justify-content:space-between;align-items:center">
+      圖片 <button class="tbtn" id="clearBtn" style="display:none" onclick="clearImgs()">清除全部</button>
+    </div>
+    <div class="dz" id="dz">
+      <div style="font-size:22px;margin-bottom:3px">⬆</div>
+      <div style="font-size:13px">拖放圖片到此，或點擊上傳</div>
+      <div style="font-size:11px;color:var(--hint);margin-top:2px">JPG · PNG · WebP · GIF（可多選）</div>
+      <input type="file" id="fi" multiple accept="image/jpeg,image/png,image/webp,image/gif">
+    </div>
+    <div class="warn hidden" id="heicW">⚠️ 偵測到 HEIC 格式，多數瀏覽器不支援。請先在手機 <b>設定 → 相機 → 格式 → 最相容</b>，或在 Mac 另存為 JPG。</div>
+    <div id="imgList" class="imglist"></div>
+    <div class="recbox hidden" id="recBox">
+      <div style="font-size:11px;font-weight:700;color:#4F46E5;margin-bottom:2px">建議生圖尺寸</div>
+      <div id="recMin"></div>
+      <div id="recBest" style="color:var(--muted)"></div>
+    </div>
+  </div>
+
+  <!-- 樣式 -->
+  <div class="sec">
+    <div class="sec-ttl">樣式</div>
+    <label>填滿方式</label>
+    <div class="tabs" id="fillTabs" style="margin-bottom:12px">
+      <button class="tab on" data-f="cover">Cover（填滿）</button>
+      <button class="tab" data-f="contain">Contain（完整）</button>
+    </div>
+    <label>貼紙內距</label>
+    <div class="optrow" id="padOpts">
+      <button class="opt on" data-pad="0">0mm</button>
+      <button class="opt" data-pad="2">2mm</button>
+      <button class="opt" data-pad="3">3mm</button>
+      <button class="opt" data-pad="5">5mm</button>
+    </div>
+    <label>圓角半徑</label>
+    <div class="slrow">
+      <input type="range" id="cr" min="0" max="50" value="0" step="1">
+      <span class="slval" id="crV">0%</span>
+    </div>
+    <label>格子背景色</label>
+    <div class="clrow">
+      <label class="cpick" title="自訂色">
+        <input type="color" id="bgPick" value="#ffffff">
+      </label>
+      <button class="csw on" data-c="#ffffff" style="background:#fff;border-color:#E5E7EB" title="白色"></button>
+      <button class="csw checker" data-c="transparent" title="透明（下載時白底）"></button>
+      <button class="csw" data-c="#FFF5E6" style="background:#FFF5E6" title="米色"></button>
+      <button class="csw" data-c="#E8F4FF" style="background:#E8F4FF" title="淺藍"></button>
+      <button class="csw" data-c="#F0FFF4" style="background:#F0FFF4" title="淺綠"></button>
+      <button class="csw" data-c="#FEF2F8" style="background:#FEF2F8" title="淺粉"></button>
+    </div>
+  </div>
+
+  <!-- 輸出 -->
+  <div class="sec">
+    <div class="sec-ttl">輸出</div>
+    <label>裁切標記</label>
+    <div class="optrow" id="cutOpts" style="margin-bottom:14px">
+      <button class="opt on" data-cut="dashed">虛線框</button>
+      <button class="opt" data-cut="corner">角落記號</button>
+      <button class="opt" data-cut="none">無</button>
+    </div>
+    <button class="dlbtn" id="dlBtn" onclick="download()">↓ 下載 PNG</button>
+    <div style="text-align:center;font-size:11px;color:var(--hint);margin-top:6px" id="dlHint"></div>
+  </div>
+
+</aside>
+
+<main class="pv">
+  <div class="cvwrap"><canvas id="pvCanvas"></canvas></div>
+  <div class="stats" id="statRow"></div>
+</main>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════════════════════
+const S={
+  preset:'711',customWmm:100,customHmm:150,
+  mode:'sticker',sWcm:3,sHcm:3,gCols:3,gRows:5,spacMM:2,
+  fill:'cover',padMM:0,crPct:0,bg:'#ffffff',cut:'dashed',
+  imgs:[],
+};
+const PRESETS={
+  '711':{w:1200,h:1800,wMM:101.6,hMM:152.4},
+  'a4':{w:2480,h:3508,wMM:210,hMM:297},
+};
+let rvTimer=null,imgId=0;
+
+// ══════════════════════════════════════════════════════════
+// COMPUTE
+// ══════════════════════════════════════════════════════════
+function C(){
+  let cW,cH,cWmm,cHmm;
+  if(S.preset!=='custom'){const p=PRESETS[S.preset];cW=p.w;cH=p.h;cWmm=p.wMM;cHmm=p.hMM;}
+  else{cWmm=+S.customWmm||100;cHmm=+S.customHmm||150;cW=Math.round(cWmm/25.4*300);cH=Math.round(cHmm/25.4*300);}
+  const pxMM=cW/cWmm, spPx=S.spacMM*pxMM, padPx=S.padMM*pxMM;
+  let cols,rows,cw,ch,ox,oy;
+  if(S.mode==='sticker'){
+    cw=S.sWcm*10*pxMM; ch=S.sHcm*10*pxMM;
+    cols=Math.max(1,Math.floor((cW+spPx)/(cw+spPx)));
+    rows=Math.max(1,Math.floor((cH+spPx)/(ch+spPx)));
+    ox=(cW-(cols*cw+(cols-1)*spPx))/2;
+    oy=(cH-(rows*ch+(rows-1)*spPx))/2;
+  } else {
+    cols=Math.max(1,+S.gCols||3); rows=Math.max(1,+S.gRows||5);
+    cw=(cW-(cols+1)*spPx)/cols; ch=(cH-(rows+1)*spPx)/rows;
+    cw=Math.max(10,cw); ch=Math.max(10,ch);
+    ox=spPx; oy=spPx;
+  }
+  const total=cols*rows;
+  const cwcm=cw/pxMM/10, chcm=ch/pxMM/10;
+  const minRec=Math.ceil(Math.max(cw,ch));
+  const bestRec=Math.max(1024,Math.ceil(minRec*1.5/256)*256);
+  return{cW,cH,cWmm,cHmm,pxMM,spPx,padPx,cols,rows,total,cw,ch,ox,oy,cwcm,chcm,minRec,bestRec};
+}
+
+// ══════════════════════════════════════════════════════════
+// CANVAS DRAWING
+// ══════════════════════════════════════════════════════════
+function rrPath(ctx,x,y,w,h,r){
+  r=Math.min(r,Math.min(w,h)/2);
+  if(r<=0){ctx.rect(x,y,w,h);return;}
+  ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.arcTo(x+w,y,x+w,y+r,r);
+  ctx.lineTo(x+w,y+h-r);ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
+  ctx.lineTo(x+r,y+h);ctx.arcTo(x,y+h,x,y+h-r,r);
+  ctx.lineTo(x,y+r);ctx.arcTo(x,y,x+r,y,r);ctx.closePath();
+}
+function cellXY(i,cv,s){
+  const col=i%cv.cols,row=Math.floor(i/cv.cols);
+  return{x:(cv.ox+col*(cv.cw+cv.spPx))*s,y:(cv.oy+row*(cv.ch+cv.spPx))*s,w:cv.cw*s,h:cv.ch*s};
+}
+function drawCell(ctx,img,x,y,w,h,pad,crPct,fill,bg){
+  const px=pad,rx=x+px,ry=y+px,rw=w-2*px,rh=h-2*px;
+  const r=Math.min(rw,rh)*(crPct/100);
+  ctx.save();ctx.beginPath();rrPath(ctx,rx,ry,rw,rh,r);ctx.clip();
+  if(bg&&bg!=='transparent'){ctx.fillStyle=bg;ctx.fillRect(rx,ry,rw,rh);}
+  if(img){
+    const iw=img.naturalWidth,ih=img.naturalHeight;
+    let sw,sh;
+    if(fill==='cover'){const sc=Math.max(rw/iw,rh/ih);sw=iw*sc;sh=ih*sc;}
+    else{const sc=Math.min(rw/iw,rh/ih);sw=iw*sc;sh=ih*sc;}
+    ctx.drawImage(img,rx+(rw-sw)/2,ry+(rh-sh)/2,sw,sh);
+  }
+  ctx.restore();
+}
+function drawCut(ctx,x,y,w,h,style,ms,lw){
+  if(style==='none')return;
+  ctx.save();ctx.strokeStyle='rgba(0,0,0,0.38)';ctx.lineWidth=lw;
+  if(style==='dashed'){ctx.setLineDash([lw*4,lw*4]);ctx.strokeRect(x+lw/2,y+lw/2,w-lw,h-lw);ctx.setLineDash([]);}
+  else if(style==='corner'){
+    [[x,y+ms,x,y,x+ms,y],[x+w-ms,y,x+w,y,x+w,y+ms],[x+w,y+h-ms,x+w,y+h,x+w-ms,y+h],[x+ms,y+h,x,y+h,x,y+h-ms]].forEach(p=>{
+      ctx.beginPath();ctx.moveTo(p[0],p[1]);ctx.lineTo(p[2],p[3]);ctx.lineTo(p[4],p[5]);ctx.stroke();
+    });
+  }
+  ctx.restore();
+}
+function renderCanvas(canvas,cv,scale){
+  canvas.width=Math.max(1,Math.round(cv.cW*scale));
+  canvas.height=Math.max(1,Math.round(cv.cH*scale));
+  const ctx=canvas.getContext('2d'),s=scale;
+  // bg
+  if(S.bg==='transparent'){ctx.clearRect(0,0,canvas.width,canvas.height);}
+  else{ctx.fillStyle=S.bg;ctx.fillRect(0,0,canvas.width,canvas.height);}
+  const total=cv.cols*cv.rows;
+  for(let i=0;i<total;i++){
+    const p=cellXY(i,cv,s);
+    const imgE=S.imgs.length>0?S.imgs[i%S.imgs.length].imgEl:null;
+    if(!imgE){
+      ctx.fillStyle='#F3F4F6';ctx.beginPath();rrPath(ctx,p.x,p.y,p.w,p.h,Math.min(p.w,p.h)*(S.crPct/100));ctx.fill();
+      ctx.strokeStyle='#D1D5DB';ctx.lineWidth=s;ctx.setLineDash([2*s,2*s]);ctx.stroke();ctx.setLineDash([]);
+      const cx=p.x+p.w/2,cy=p.y+p.h/2,ps=Math.min(p.w,p.h)*.12;
+      ctx.strokeStyle='#9CA3AF';ctx.lineWidth=1.5*s;ctx.beginPath();
+      ctx.moveTo(cx-ps,cy);ctx.lineTo(cx+ps,cy);ctx.moveTo(cx,cy-ps);ctx.lineTo(cx,cy+ps);ctx.stroke();
+    } else {
+      drawCell(ctx,imgE,p.x,p.y,p.w,p.h,cv.padPx*s,S.crPct,S.fill,S.bg!=='transparent'?S.bg:null);
+    }
+    drawCut(ctx,p.x,p.y,p.w,p.h,S.cut,8*s,s);
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+// PREVIEW
+// ══════════════════════════════════════════════════════════
+const pvCanvas=document.getElementById('pvCanvas');
+function schedule(){clearTimeout(rvTimer);rvTimer=setTimeout(refresh,90);}
+function refresh(){
+  const cv=C();
+  const pa=document.querySelector('.pv');
+  const mW=Math.max(80,pa.clientWidth-32),mH=Math.max(80,pa.clientHeight-80);
+  const s=Math.min(mW/cv.cW,mH/cv.cH,1);
+  renderCanvas(pvCanvas,cv,s);
+  updateUI(cv);
+}
+function pvScale(){const cv=C(),pa=document.querySelector('.pv');return Math.min((pa.clientWidth-32)/cv.cW,(pa.clientHeight-80)/cv.cH,1);}
+
+function updateUI(cv){
+  // Layout info
+  const li=document.getElementById('layInfo');
+  if(S.mode==='sticker')
+    li.innerHTML=`自動排列：<b>${cv.cols} 欄 × ${cv.rows} 列 = ${cv.total} 格</b><br>每格 ${cv.cwcm.toFixed(1)} × ${cv.chcm.toFixed(1)} cm`;
+  else
+    li.innerHTML=`<b>${cv.cols} × ${cv.rows} = ${cv.total} 格</b><br>每格 ${cv.cwcm.toFixed(1)} × ${cv.chcm.toFixed(1)} cm`;
+  // Stats
+  const sr=document.getElementById('statRow');
+  const pLabel=S.preset==='711'?'7-11 ibon 4×6"':S.preset==='a4'?'A4':`${Math.round(cv.cWmm)}×${Math.round(cv.cHmm)}mm`;
+  sr.innerHTML=`
+    <div class="chip"><b>${cv.total}</b> 格${S.imgs.length?` · ${S.imgs.length}張循環`:'・無圖片'}</div>
+    <div class="chip">${pLabel} · ${cv.cW}×${cv.cH}px</div>
+    <div class="chip acc">建議生圖 ${cv.minRec}px 起，最佳 ${cv.bestRec}px+</div>`;
+  // Download hint
+  document.getElementById('dlHint').textContent=`${cv.cW} × ${cv.cH} px · PNG`;
+  // Rec box in images section
+  const rb=document.getElementById('recBox');
+  if(S.imgs.length>0){
+    rb.classList.remove('hidden');
+    document.getElementById('recMin').innerHTML=`最低：<b>${cv.minRec} × ${cv.minRec} px</b>`;
+    document.getElementById('recBest').textContent=`最佳：${cv.bestRec} × ${cv.bestRec} px 以上`;
+  } else rb.classList.add('hidden');
+  // Image quality dots
+  renderImgList(cv);
+}
+
+// ══════════════════════════════════════════════════════════
+// IMAGES
+// ══════════════════════════════════════════════════════════
+function qInfo(img,cv){
+  const need=Math.min(cv.cw,cv.ch);
+  const have=Math.min(img.w,img.h);
+  if(have>=need*.9)return{cls:'qg',label:'品質良好',tip:`${img.w}×${img.h}px · 印刷清晰`};
+  if(have>=need*.6)return{cls:'qy',label:'勉強可用',tip:`${img.w}×${img.h}px · 建議至少 ${Math.round(need)}px`};
+  return{cls:'qr',label:'可能模糊',tip:`${img.w}×${img.h}px · 解析度不足`};
+}
+function renderImgList(cv){
+  if(!cv)cv=C();
+  const el=document.getElementById('imgList');
+  document.getElementById('clearBtn').style.display=S.imgs.length?'block':'none';
+  if(!S.imgs.length){el.innerHTML='';return;}
+  el.innerHTML=S.imgs.map((img,i)=>{
+    const q=qInfo(img,cv);
+    return`<div class="imgitem" data-i="${i}">
+      <img class="imgthumb" src="${img.url}" alt="">
+      <div class="imginfo">
+        <div class="imgname">${img.name}</div>
+        <div class="imgmeta">${img.w}×${img.h}px · ${q.label}</div>
+      </div>
+      <div class="qdot ${q.cls}" title="${q.tip}"></div>
+      <div class="imgacts">
+        <button class="ab" onclick="mv(${i},-1)" ${i===0?'disabled':''}title="上移">↑</button>
+        <button class="ab" onclick="mv(${i},1)" ${i===S.imgs.length-1?'disabled':''}title="下移">↓</button>
+        <button class="ab d" onclick="rm(${i})" title="刪除">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function mv(i,d){const ni=i+d;if(ni<0||ni>=S.imgs.length)return;[S.imgs[i],S.imgs[ni]]=[S.imgs[ni],S.imgs[i]];renderImgList();schedule();}
+function rm(i){S.imgs.splice(i,1);renderImgList();schedule();}
+function clearImgs(){S.imgs=[];renderImgList();schedule();}
+
+async function loadFile(file){
+  const name=file.name.toLowerCase();
+  if(file.type==='image/heic'||file.type==='image/heif'||name.endsWith('.heic')||name.endsWith('.heif')){
+    document.getElementById('heicW').classList.remove('hidden');return null;
+  }
+  return new Promise(res=>{
+    const r=new FileReader();
+    r.onload=e=>{
+      const img=new Image();
+      img.onload=()=>res({id:imgId++,name:file.name,url:e.target.result,imgEl:img,w:img.naturalWidth,h:img.naturalHeight});
+      img.onerror=()=>res(null);
+      img.src=e.target.result;
+    };
+    r.readAsDataURL(file);
+  });
+}
+async function handleFiles(files){
+  const loaded=await Promise.all([...files].map(loadFile));
+  S.imgs.push(...loaded.filter(Boolean));
+  renderImgList();schedule();
+}
+
+// ══════════════════════════════════════════════════════════
+// DOWNLOAD
+// ══════════════════════════════════════════════════════════
+async function download(){
+  const btn=document.getElementById('dlBtn');
+  btn.disabled=true;btn.textContent='⏳ 生成中…';
+  try{
+    const cv=C(),canvas=document.createElement('canvas');
+    renderCanvas(canvas,cv,1);
+    await new Promise(res=>{
+      canvas.toBlob(blob=>{
+        if(!blob){const a=document.createElement('a');a.href=canvas.toDataURL();a.download=`stickers-${cv.cW}x${cv.cH}.png`;a.click();res();return;}
+        const url=URL.createObjectURL(blob);
+        const a=document.createElement('a');a.href=url;a.download=`stickers-${cv.cW}x${cv.cH}.png`;
+        document.body.appendChild(a);a.click();document.body.removeChild(a);
+        setTimeout(()=>URL.revokeObjectURL(url),1500);res();
+      },'image/png');
+    });
+    btn.className='dlbtn done';btn.textContent='✓ 下載完成！';
+    setTimeout(()=>{btn.className='dlbtn';btn.disabled=false;btn.textContent='↓ 下載 PNG';},3000);
+  }catch(e){console.error(e);btn.disabled=false;btn.textContent='↓ 下載 PNG';}
+}
+
+// ══════════════════════════════════════════════════════════
+// EVENT BINDINGS
+// ══════════════════════════════════════════════════════════
+// Preset
+document.querySelectorAll('[data-p]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('[data-p]').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');S.preset=b.dataset.p;
+  document.getElementById('customSz').classList.toggle('hidden',S.preset!=='custom');
+  schedule();
+}));
+document.getElementById('cW').addEventListener('input',e=>{S.customWmm=+e.target.value;schedule();});
+document.getElementById('cH').addEventListener('input',e=>{S.customHmm=+e.target.value;schedule();});
+
+// Mode
+document.querySelectorAll('[data-m]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('[data-m]').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');S.mode=b.dataset.m;
+  document.getElementById('sMode').classList.toggle('hidden',S.mode!=='sticker');
+  document.getElementById('gMode').classList.toggle('hidden',S.mode!=='grid');
+  schedule();
+}));
+document.getElementById('sW').addEventListener('input',e=>{S.sWcm=+e.target.value;schedule();});
+document.getElementById('sH').addEventListener('input',e=>{S.sHcm=+e.target.value;schedule();});
+document.getElementById('gC').addEventListener('input',e=>{S.gCols=+e.target.value;renderImgList();schedule();});
+document.getElementById('gR').addEventListener('input',e=>{S.gRows=+e.target.value;renderImgList();schedule();});
+document.getElementById('sp').addEventListener('input',e=>{S.spacMM=+e.target.value;schedule();});
+
+// Dropzone
+const dz=document.getElementById('dz'),fi=document.getElementById('fi');
+dz.addEventListener('click',()=>fi.click());
+fi.addEventListener('change',e=>{handleFiles(e.target.files);fi.value='';});
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('over');});
+dz.addEventListener('dragleave',()=>dz.classList.remove('over'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('over');handleFiles(e.dataTransfer.files);});
+
+// Fill
+document.querySelectorAll('[data-f]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('[data-f]').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');S.fill=b.dataset.f;schedule();
+}));
+
+// Padding
+document.querySelectorAll('[data-pad]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('[data-pad]').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');S.padMM=+b.dataset.pad;schedule();
+}));
+
+// Corner radius
+document.getElementById('cr').addEventListener('input',e=>{
+  S.crPct=+e.target.value;document.getElementById('crV').textContent=S.crPct+'%';schedule();
+});
+
+// Background color
+document.getElementById('bgPick').addEventListener('input',e=>{
+  S.bg=e.target.value;
+  document.querySelectorAll('[data-c]').forEach(x=>x.classList.remove('on'));
+  schedule();
+});
+document.querySelectorAll('[data-c]').forEach(b=>b.addEventListener('click',()=>{
+  S.bg=b.dataset.c;
+  document.querySelectorAll('[data-c]').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');
+  if(S.bg!=='transparent')document.getElementById('bgPick').value=S.bg;
+  schedule();
+}));
+
+// Cut marks
+document.querySelectorAll('[data-cut]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('[data-cut]').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');S.cut=b.dataset.cut;schedule();
+}));
+
+// Resize
+new ResizeObserver(()=>schedule()).observe(document.querySelector('.pv'));
+
+// Init
+refresh();
+</script>
+</body>
+</html>
