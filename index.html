@@ -101,6 +101,21 @@ input[type=range]{width:100%;accent-color:var(--primary);cursor:pointer}
 .cpbtn:hover{background:var(--primary);color:#fff}
 .cpbtn.ok{background:var(--ok);border-color:var(--ok);color:#fff}
 .tnote{font-size:11px;color:var(--muted);margin-top:5px;padding:5px 8px;background:var(--bg);border-radius:5px;line-height:1.5}
+/* ─ photo reference ─ */
+.pref{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;background:var(--bg);border-radius:7px;border:1px solid var(--bd);margin-bottom:10px;cursor:pointer;transition:all .12s}
+.pref input[type=checkbox]{margin-top:2px;accent-color:var(--primary);flex-shrink:0;width:14px;height:14px;cursor:pointer}
+.pref span{font-size:12.5px;color:var(--text);line-height:1.45}
+.pref.on{background:var(--primary-bg);border-color:var(--primary)}
+.pnote{font-size:11.5px;color:#B91C1C;line-height:1.6;margin-top:5px;padding:6px 9px;background:#FEF2F2;border-radius:5px;border:1px solid #FECACA;display:none}
+.pnote.show{display:block}
+/* ─ tips ─ */
+.tip{display:flex;align-items:flex-start;gap:9px;padding:8px 0;border-bottom:1px solid var(--bd);font-size:12px;line-height:1.55}
+.tip:last-child{border-bottom:none;padding-bottom:0}
+.tip-ico{font-size:16px;flex-shrink:0;width:20px;text-align:center;padding-top:1px}
+.tip-body{flex:1;color:var(--muted)}
+.tip-body b{color:var(--text)}
+.tapbtn{display:inline-block;margin-top:5px;padding:3px 10px;background:var(--primary);color:#fff;border:none;border-radius:5px;font-size:11.5px;font-weight:600;cursor:pointer;transition:background .12s}
+.tapbtn:hover{background:#4444D4}
 /* ─ responsive ─ */
 @media(max-width:660px){
   body{height:auto;overflow-y:auto}
@@ -163,6 +178,10 @@ input[type=range]{width:100%;accent-color:var(--primary);cursor:pointer}
     <div class="sec-ttl">🤖 AI 生圖助手</div>
     <label>主題（中英文皆可）</label>
     <input type="text" id="phSubj" placeholder="例：戴眼鏡的貓咪 / 可愛蜜蜂 / 滿分獎勵章" style="margin-bottom:9px">
+    <label class="pref" id="prefRow" onclick="togglePhotoRef()">
+      <input type="checkbox" id="photoRef" onclick="event.stopPropagation();togglePhotoRef()">
+      <span>📸 參考上傳照片<br><span style="font-size:11px;color:var(--muted)">真人 / 寵物 / 自畫像，擷取特徵轉成貼紙風格</span></span>
+    </label>
     <label>風格</label>
     <div class="cg" id="styCG">
       <button class="cs on" data-sty="cartoon">🎨 卡通插圖</button>
@@ -175,14 +194,16 @@ input[type=range]{width:100%;accent-color:var(--primary);cursor:pointer}
     </div>
     <label>AI 工具</label>
     <div class="cg" id="toolCG">
-      <button class="cs on" data-tool="dalle">ChatGPT</button>
+      <button class="cs on" data-tool="other">通用</button>
+      <button class="cs" data-tool="dalle">ChatGPT</button>
+      <button class="cs" data-tool="gemini">Gemini</button>
       <button class="cs" data-tool="mj">Midjourney</button>
       <button class="cs" data-tool="flux">Flux / SD</button>
-      <button class="cs" data-tool="other">通用</button>
     </div>
     <label>Prompt</label>
     <textarea class="phout" id="phOut" readonly></textarea>
     <button class="cpbtn" id="cpBtn" onclick="copyPH()">📋 複製 Prompt</button>
+    <div class="pnote" id="pnote"></div>
     <div class="tnote" id="tnote"></div>
     <div class="infobox" style="margin-top:6px">
       ✓ 正方形 (1:1) &nbsp;✓ 主體置中 &nbsp;✓ 白色背景<br>
@@ -255,6 +276,47 @@ input[type=range]{width:100%;accent-color:var(--primary);cursor:pointer}
     </div>
     <button class="dlbtn" id="dlBtn" onclick="download()">↓ 下載 PNG</button>
     <div style="text-align:center;font-size:11px;color:var(--hint);margin-top:6px" id="dlHint"></div>
+  </div>
+  <!-- 新手攻略 -->
+  <div class="sec">
+    <div class="sec-ttl">✨ 新手攻略</div>
+    <div class="tip">
+      <div class="tip-ico">⭕</div>
+      <div class="tip-body">
+        <b>想要圓形貼紙？</b><br>
+        把「圓角半徑」拉到 50%，方形格子就變成圓形！<br>
+        <button class="tapbtn" onclick="applyCircle()">立即套用 →</button>
+      </div>
+    </div>
+    <div class="tip">
+      <div class="tip-ico">🖨️</div>
+      <div class="tip-body">
+        <b>怎麼去 7-11 印？</b><br>
+        下載 PNG → ibon App → 相片列印 → 貼紙相紙 → 4×6 英吋，上傳圖片後到門市掃碼取件
+      </div>
+    </div>
+    <div class="tip">
+      <div class="tip-ico">✂️</div>
+      <div class="tip-body">
+        <b>怎麼裁切？</b><br>
+        印出來後沿虛線用剪刀剪，就能得到一枚枚獨立貼紙
+      </div>
+    </div>
+    <div class="tip">
+      <div class="tip-ico">🖼️</div>
+      <div class="tip-body">
+        <b>可以放多張圖嗎？</b><br>
+        可以！上傳多張圖後會依序循環填滿格子，↑↓ 調整出場順序
+      </div>
+    </div>
+    <div class="tip">
+      <div class="tip-ico">🟢</div>
+      <div class="tip-body">
+        <b>品質燈號是什麼？</b><br>
+        🟢 印刷清晰 &nbsp;🟡 勉強可印 &nbsp;🔴 可能模糊<br>
+        燈號會隨貼紙尺寸設定即時更新
+      </div>
+    </div>
   </div>
 
 </aside>
@@ -506,35 +568,84 @@ const STYS={
   watercolor:'watercolor painting style, soft pastel colors, artistic brushstrokes',
   ghibli:    'Studio Ghibli inspired illustration, whimsical, warm colors',
   minimal:   'minimal line art, simple clean illustration, few colors',
-  realistic: 'realistic, photographic style, highly detailed',
+  realistic: 'realistic illustration style, detailed, lifelike',
   pixel:     '8-bit pixel art style, retro game sprite, crisp pixels',
   stamp:     'vintage rubber stamp style, retro engraving, bold outline, monochrome',
 };
-const TPLS={
-  dalle:{
-    build:(s,st)=>`${s}, ${st}, white background, centered composition, no text, suitable for sticker printing, high resolution, square format`,
-    note:'⚠️ 在 DALL-E 介面點選「正方形 (1:1)」後再生圖，Prompt 本身不需加 --ar',
+
+// Base prompt builders (no photo ref)
+const BASE={
+  other:  (s,st)=>`${s}, ${st}, die-cut sticker design, isolated on pure white background, centered composition, clear solid outlines, no text, square format`,
+  dalle:  (s,st)=>`${s}, ${st}, die-cut sticker design, isolated on pure white background, centered composition, clear solid outlines, no text, square format`,
+  gemini: (s,st)=>`${s}, ${st}, die-cut sticker design, isolated on a pure white background, centered composition, clear solid outlines, no text`,
+  mj:     (s,st)=>`${s}, ${st}, die-cut sticker design, isolated on pure white background, centered composition, clear solid outlines --ar 1:1 --v 6`,
+  flux:   (s,st)=>`${s}, ${st}, die-cut sticker design, isolated on pure white background, centered subject, clear solid outlines, high resolution`,
+};
+
+// Photo-reference prompt builders
+const PHOTO={
+  other:  (s,st)=>`Based on the uploaded photo, transform the subject into the following style: ${s}, ${st}, die-cut sticker design, isolated on pure white background, centered composition, clear solid outlines, no text, square format`,
+  dalle:  (s,st)=>`Please analyze the attached photo and generate a sticker based on the subject's key features (hair, clothing, accessories, face style). ${s}, ${st}, die-cut sticker design, isolated on pure white background, centered composition, clear solid outlines, no text, square format`,
+  gemini: (s,st)=>`Please analyze the attached photo and generate a sticker based on the subject's key features (hair, clothing, accessories, face style). ${s}, ${st}, die-cut sticker design, isolated on a pure white background, centered composition, clear solid outlines, no text`,
+  mj:     (s,st)=>`${s}, ${st}, die-cut sticker design, isolated on pure white background, centered composition, clear solid outlines --ar 1:1 --v 6 --cref [貼上照片網址]`,
+  flux:   (s,st)=>`Based on the uploaded reference photo, transform the subject into: ${s}, ${st}, die-cut sticker design, isolated on pure white background, centered subject, high resolution`,
+};
+
+// Tool notes
+const NOTES={
+  base:{
+    other: '⚠️ 生圖後記得在介面選擇 1:1 正方形輸出',
+    dalle: '⚠️ 在 DALL-E 介面點選「正方形 (1:1)」後再生圖，Prompt 本身不需加 --ar',
+    gemini:'✓ Gemini 生圖預設通常為 1:1。直接貼上 Prompt 即可',
+    mj:    '✓ --ar 1:1 已包含在 Prompt 中，直接貼上即可',
+    flux:  '⚠️ 在介面設定 Width = Height（如 1024×1024）輸出正方形',
   },
-  mj:{
-    build:(s,st)=>`${s}, ${st}, white background, centered composition, sticker design, clean edges --ar 1:1 --v 6`,
-    note:'✓ --ar 1:1 已包含在 Prompt 中，直接貼上即可',
-  },
-  flux:{
-    build:(s,st)=>`${s}, ${st}, white background, centered subject, isolated on white, high resolution`,
-    note:'⚠️ 在介面設定 Width = Height（如 1024×1024）輸出正方形',
-  },
-  other:{
-    build:(s,st)=>`${s}, ${st}, white background, centered subject with clear margins, suitable for sticker printing, square format`,
-    note:'⚠️ 生圖後記得在介面選擇 1:1 正方形輸出',
+  photo:{
+    other: '⚠️ 生圖後記得選擇 1:1 正方形輸出',
+    dalle: '⚠️ 在 DALL-E 介面點選「正方形 (1:1)」後再生圖',
+    gemini:'✓ Gemini 生圖預設通常為 1:1',
+    mj:    '✓ 取得照片網址方法：上傳至 Discord → 右鍵點圖片 → 複製連結，貼到 --cref 後面',
+    flux:  '⚠️ 在介面設定 Width = Height 輸出正方形',
   },
 };
-let phSty='cartoon', phTool='dalle';
+
+// Photo ref red warnings
+const PHOTO_WARN={
+  other:  '💡 提醒：請先在 AI 對話框裡上傳你的照片，再貼上這段 Prompt！',
+  dalle:  '💡 提醒：請先在 ChatGPT 上傳照片再送出 Prompt！AI 會擷取特徵重新繪製，不會 100% 相像但能抓到神韻。',
+  gemini: '💡 提醒：請先在 Gemini 上傳照片再送出 Prompt！AI 會擷取特徵重新繪製，不會 100% 相像但能抓到神韻。',
+  mj:     '💡 提醒：請先上傳照片到 Discord，右鍵複製圖片連結，貼到 --cref [貼上照片網址] 的括號位置！',
+  flux:   '💡 提醒：請先在 Flux/SD 介面上傳參考照片，再貼上這段 Prompt！',
+};
+
+let phSty='cartoon', phTool='other', phPhotoRef=false;
+
+function togglePhotoRef(){
+  const cb=document.getElementById('photoRef');
+  // If called from label click, checkbox may not have toggled yet; sync from DOM state after a tick
+  setTimeout(()=>{
+    phPhotoRef=cb.checked;
+    document.getElementById('prefRow').classList.toggle('on',phPhotoRef);
+    buildPH();
+  },0);
+}
+
 function buildPH(){
   const subj=document.getElementById('phSubj').value.trim()||'[你的主題]';
-  const t=TPLS[phTool];
-  document.getElementById('phOut').value=t.build(subj,STYS[phSty]);
-  document.getElementById('tnote').textContent=t.note;
+  const st=STYS[phSty];
+  const prompt=phPhotoRef ? PHOTO[phTool](subj,st) : BASE[phTool](subj,st);
+  document.getElementById('phOut').value=prompt;
+  const noteEl=document.getElementById('tnote');
+  const pnoteEl=document.getElementById('pnote');
+  noteEl.textContent=phPhotoRef ? NOTES.photo[phTool] : NOTES.base[phTool];
+  if(phPhotoRef){
+    pnoteEl.textContent=PHOTO_WARN[phTool];
+    pnoteEl.classList.add('show');
+  } else {
+    pnoteEl.classList.remove('show');
+  }
 }
+
 function copyPH(){
   const text=document.getElementById('phOut').value,btn=document.getElementById('cpBtn');
   const ok=()=>{btn.textContent='✓ 已複製！';btn.className='cpbtn ok';setTimeout(()=>{btn.textContent='📋 複製 Prompt';btn.className='cpbtn';},2000);};
@@ -554,6 +665,14 @@ document.getElementById('phSubj').addEventListener('input',buildPH);
 // ══════════════════════════════════════════════════════════
 // EVENT BINDINGS
 // ══════════════════════════════════════════════════════════
+// Quick-apply helpers
+function applyCircle(){
+  S.crPct=50;
+  document.getElementById('cr').value=50;
+  document.getElementById('crV').textContent='50%';
+  schedule();
+  document.getElementById('cr').scrollIntoView({behavior:'smooth',block:'center'});
+}
 // Preset
 document.querySelectorAll('[data-p]').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('[data-p]').forEach(x=>x.classList.remove('on'));
@@ -629,6 +748,10 @@ new ResizeObserver(()=>schedule()).observe(document.querySelector('.pv'));
 // Init
 refresh();
 buildPH();
+// Sync default tool button to 'other'
+document.querySelectorAll('[data-tool]').forEach(b=>{
+  b.classList.toggle('on', b.dataset.tool==='other');
+});
 </script>
 </body>
 </html>
