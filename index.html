@@ -21,6 +21,8 @@ header{display:flex;align-items:center;gap:10px;padding:9px 16px;background:var(
 .app{display:flex;flex:1;overflow:hidden}
 /* ─ panel ─ */
 .panel{width:272px;flex-shrink:0;background:var(--panel);border-right:1px solid var(--bd);overflow-y:auto;overflow-x:hidden}
+.panel-r{width:300px;flex-shrink:0;background:var(--panel);border-left:1px solid var(--bd);overflow-y:auto;overflow-x:hidden}
+@media(max-width:1100px){.panel-r{display:none}}
 .sec{padding:14px 15px;border-bottom:1px solid var(--bd)}
 .sec-ttl{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px}
 /* ─ form ─ */
@@ -212,8 +214,8 @@ input[type=range]{width:100%;accent-color:var(--primary);cursor:pointer}
     <div class="infobox" id="layInfo">計算中…</div>
   </div>
 
-  <!-- AI 生圖助手 -->
-  <div class="sec">
+  <!-- AI 生圖助手（≥1101px 時由 placeAI() 搬到右欄 #rpanel，窄螢幕搬回此處） -->
+  <div class="sec" id="aiSec">
     <div class="sec-ttl">🤖 AI 生圖助手</div>
     <div class="tabs" id="helperTabs">
       <button class="tab on" data-h="img">🖼️ 圖像貼紙</button>
@@ -304,7 +306,7 @@ input[type=range]{width:100%;accent-color:var(--primary);cursor:pointer}
   </div>
 
   <!-- 圖片 -->
-  <div class="sec">
+  <div class="sec" id="imgSec">
     <div class="sec-ttl" style="display:flex;justify-content:space-between;align-items:center">
       圖片 <button class="tbtn" id="clearBtn" style="display:none" onclick="clearImgs()">清除全部</button>
     </div>
@@ -377,6 +379,8 @@ input[type=range]{width:100%;accent-color:var(--primary);cursor:pointer}
   <div class="cvwrap"><canvas id="pvCanvas"></canvas></div>
   <div class="stats" id="statRow"></div>
 </main>
+
+<aside class="panel-r" id="rpanel"></aside>
 </div>
 
 <!-- Welcome Modal -->
@@ -391,7 +395,7 @@ input[type=range]{width:100%;accent-color:var(--primary);cursor:pointer}
     </div>
     <div class="mtip">
       <div class="mtip-ico">🤖</div>
-      <div class="mtip-body"><b>還沒有圖？</b>用左邊「AI 生圖助手」→ 填入主題 → 複製 Prompt → 貼到 ChatGPT 或 Gemini 生圖再上傳</div>
+      <div class="mtip-body"><b>還沒有圖？</b>用「AI 生圖助手」面板（桌面版在右側）→ 填入主題 → 複製 Prompt → 貼到 ChatGPT 或 Gemini 生圖再上傳</div>
     </div>
     <div class="mtip">
       <div class="mtip-ico">🪄</div>
@@ -986,6 +990,16 @@ document.querySelectorAll('[data-cut]').forEach(b=>b.addEventListener('click',()
   document.querySelectorAll('[data-cut]').forEach(x=>x.classList.remove('on'));
   b.classList.add('on');S.cut=b.dataset.cut;schedule();
 }));
+
+// AI helper column placement: wide → right panel, narrow → back above 圖片 in left panel
+const mqWide=window.matchMedia('(min-width:1101px)');
+function placeAI(){
+  const ai=document.getElementById('aiSec');
+  if(mqWide.matches)document.getElementById('rpanel').appendChild(ai);
+  else{const imgSec=document.getElementById('imgSec');imgSec.parentNode.insertBefore(ai,imgSec);}
+}
+mqWide.addEventListener('change',placeAI);
+placeAI();
 
 // Resize
 new ResizeObserver(()=>schedule()).observe(document.querySelector('.pv'));
