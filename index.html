@@ -215,6 +215,11 @@ input[type=range]{width:100%;accent-color:var(--primary);cursor:pointer}
   <!-- AI 生圖助手 -->
   <div class="sec">
     <div class="sec-ttl">🤖 AI 生圖助手</div>
+    <div class="tabs" id="helperTabs">
+      <button class="tab on" data-h="img">🖼️ 圖像貼紙</button>
+      <button class="tab" data-h="ty">✍️ 文字貼紙</button>
+    </div>
+    <div id="helpImg">
     <label>主題（中英文皆可）</label>
     <input type="text" id="phSubj" placeholder="例：戴眼鏡的貓咪 / 可愛蜜蜂 / 滿分獎勵章" style="margin-bottom:9px">
     <label class="pref" id="prefRow" onclick="togglePhotoRef()">
@@ -248,6 +253,54 @@ input[type=range]{width:100%;accent-color:var(--primary);cursor:pointer}
       ✓ 正方形 (1:1) &nbsp;✓ 主體置中 &nbsp;✓ 白色背景<br>
       ✓ 建議最低 <b id="phMin">—</b>px，最佳 <b id="phBest">—</b>px 以上
     </div>
+    </div><!-- /helpImg -->
+
+    <div id="helpTy" class="hidden">
+    <label>你想說的話</label>
+    <input type="text" id="tyText" placeholder="例：還要繼續拚 / 不想上班 / 你已經很棒了" style="margin-bottom:9px">
+    <label>情緒</label>
+    <div class="cg" id="emoCG">
+      <button class="cs on" data-emo="weary">😑 厭世</button>
+      <button class="cs" data-emo="meltdown">🤯 崩潰</button>
+      <button class="cs" data-emo="hotblood">🔥 熱血</button>
+      <button class="cs" data-emo="healing">🌿 治癒</button>
+      <button class="cs" data-emo="artsy">📖 文青</button>
+    </div>
+    <label>視覺風格</label>
+    <div class="cg" id="aesCG">
+      <button class="cs on" data-aes="meme">🗯️ 粗體梗圖</button>
+      <button class="cs" data-aes="manga">💥 漫畫標語</button>
+      <button class="cs" data-aes="ink">🖌️ 東方水墨</button>
+      <button class="cs" data-aes="cute">🧸 可愛貼紙</button>
+    </div>
+    <label>生成方式 <span style="font-weight:400;color:var(--hint);font-size:11px">（選風格時會自動帶入建議）</span></label>
+    <div class="tabs" id="routeTabs" style="margin-bottom:10px">
+      <button class="tab on" data-route="A">圖文融合（一步）</button>
+      <button class="tab" data-route="B">圖字分離（兩步）</button>
+    </div>
+    <label>AI 工具</label>
+    <div class="cg" id="tyToolCG">
+      <button class="cs on" data-tyt="other">通用</button>
+      <button class="cs" data-tyt="dalle">ChatGPT</button>
+      <button class="cs" data-tyt="gemini">Gemini</button>
+      <button class="cs" data-tyt="mj">Midjourney</button>
+      <button class="cs" data-tyt="flux">Flux / SD</button>
+    </div>
+    <div id="tyOutA">
+      <label>Prompt</label>
+      <textarea class="phout" id="tyOut" readonly></textarea>
+      <button class="cpbtn" onclick="copyTy('tyOut',this)">📋 複製 Prompt</button>
+    </div>
+    <div id="tyOutB" class="hidden">
+      <label>Step 1 · 先生底圖</label>
+      <textarea class="phout" id="tyOut1" readonly style="min-height:64px"></textarea>
+      <button class="cpbtn" onclick="copyTy('tyOut1',this)">📋 複製 Step 1</button>
+      <label style="margin-top:10px">Step 2 · 在同一段對話加字</label>
+      <textarea class="phout" id="tyOut2" readonly style="min-height:64px"></textarea>
+      <button class="cpbtn" onclick="copyTy('tyOut2',this)">📋 複製 Step 2</button>
+    </div>
+    <div class="tnote" id="tyNote"></div>
+    </div><!-- /helpTy -->
   </div>
 
   <!-- 圖片 -->
@@ -743,6 +796,109 @@ document.querySelectorAll('[data-tool]').forEach(b=>b.addEventListener('click',(
 document.getElementById('phSubj').addEventListener('input',buildPH);
 
 // ══════════════════════════════════════════════════════════
+// PROMPT ENGINE — TYPOGRAPHY（recipe-data｜未來抽成 shared/recipe-data.js）
+// 純資料，不碰 DOM、不碰 S。Emotion 只管情緒、Aesthetic 只管視覺，
+// route 是該風格的「建議流程」，使用者可覆蓋。
+// ══════════════════════════════════════════════════════════
+const TY_DATA={
+  emotions:{
+    weary:   {label:'厭世',p:'deadpan, tired, ironic dry-humor mood'},
+    meltdown:{label:'崩潰',p:'overwhelmed, frantic, exaggerated breakdown energy'},
+    hotblood:{label:'熱血',p:'passionate, burning, triumphant high-energy mood'},
+    healing: {label:'治癒',p:'soft, warm, comforting and soothing mood'},
+    artsy:   {label:'文青',p:'quiet, poetic, understated indie-zine mood'},
+  },
+  aesthetics:{
+    meme: {label:'粗體梗圖',route:'A',p:'bold meme typography, ultra-thick impact lettering, high contrast colors, punchy internet-meme sticker style'},
+    manga:{label:'漫畫標語',route:'A',p:'manga action lettering, dynamic comic slogan with speed lines and impact flashes'},
+    ink:  {label:'東方水墨',route:'B',p:'East Asian ink-wash painting aesthetic, expressive brush strokes, generous negative space'},
+    cute: {label:'可愛貼紙',route:'A',p:'cute kawaii sticker style, chunky rounded shapes, soft pastel colors'},
+  },
+  // 特定「情緒|風格」組合出圖不佳時，在這裡加特調模板覆蓋預設，不改架構。
+  // 格式：'meltdown|ink':{a:(t,E,A)=>`…`, b1:(E,A)=>`…`, b2:(t,A)=>`…`}
+  overrides:{},
+};
+const TY_TAIL={other:', square format',dalle:', square format',gemini:'',mj:' --ar 1:1 --v 6',flux:', high resolution'};
+
+// PROMPT ENGINE — TYPOGRAPHY（recipe｜未來抽成 shared/recipe.js）
+// 純函數：recipe（text/emotion/aesthetic/route）+ tool 進，prompt 文字出。
+function tyAssemble(recipe,tool){
+  const E=TY_DATA.emotions[recipe.emotion].p;
+  const A=TY_DATA.aesthetics[recipe.aesthetic].p;
+  const tail=(tool in TY_TAIL)?TY_TAIL[tool]:TY_TAIL.other;
+  const ov=TY_DATA.overrides[recipe.emotion+'|'+recipe.aesthetic]||{};
+  const t=recipe.text;
+  if(recipe.route==='A'){
+    const a=ov.a?ov.a(t,E,A):`Typography sticker design. The main visual element is the text "${t}" written large, bold and clearly legible — render these exact characters accurately, no typos or missing strokes. Mood: ${E}. Visual style: ${A}. Die-cut sticker design, isolated on pure white background, centered composition${tail}`;
+    return{route:'A',a};
+  }
+  const b1=ov.b1?ov.b1(E,A):`Background artwork for a quote sticker. Mood: ${E}. Visual style: ${A}. Leave generous clear space in the center for text to be added later. Absolutely no text, letters or characters. Die-cut sticker design, isolated on pure white background, centered composition${tail}`;
+  const b2=ov.b2?ov.b2(t,A):`Now add the text "${t}" to the center of the image you just generated. Lettering style should match the artwork (${A}). Render these exact characters accurately, no typos or missing strokes, large and clearly legible. Keep everything else unchanged.`;
+  return{route:'B',b1,b2};
+}
+
+// ── Typography UI glue（DOM 層，未來抽檔時留在 index.html）──
+let tyEmotion='weary',tyAes='meme',tyRoute='A',tyTool='other';
+const TY_TOOL_NOTE={
+  other:'⚠️ 生圖後記得在介面選 1:1 正方形輸出',
+  dalle:'⚠️ 在 ChatGPT 介面選「正方形 (1:1)」再生圖',
+  gemini:'✓ Gemini 生圖預設通常為 1:1，直接貼上即可',
+  flux:'⚠️ 在介面設定 Width = Height（如 1024×1024）',
+};
+function buildTy(){
+  const raw=document.getElementById('tyText').value.trim();
+  const r=tyAssemble({text:raw||'[你想說的話]',emotion:tyEmotion,aesthetic:tyAes,route:tyRoute},tyTool);
+  const isB=r.route==='B';
+  document.getElementById('tyOutA').classList.toggle('hidden',isB);
+  document.getElementById('tyOutB').classList.toggle('hidden',!isB);
+  if(isB){document.getElementById('tyOut1').value=r.b1;document.getElementById('tyOut2').value=r.b2;}
+  else{document.getElementById('tyOut').value=r.a;}
+  const lines=[];
+  if(isB){
+    lines.push('💡 流程：貼 Step 1 生底圖 → 滿意後在<b>同一段對話</b>貼 Step 2 加字');
+    lines.push(tyTool==='mj'?'⚠️ Midjourney 無法接著同一張圖加字，Step 2 請改用 ChatGPT / Gemini':TY_TOOL_NOTE[tyTool]);
+  }else{
+    lines.push('💡 中文字偶爾會寫錯，建議一次生 2～4 張挑最好；常翻車就改用「圖字分離」');
+    lines.push(tyTool==='mj'?'⚠️ Midjourney 中文字幾乎必翻車，圖文融合建議用 ChatGPT / Gemini':TY_TOOL_NOTE[tyTool]);
+  }
+  document.getElementById('tyNote').innerHTML=lines.join('<br>');
+}
+function setTyRoute(rt){
+  tyRoute=rt;
+  document.querySelectorAll('[data-route]').forEach(x=>x.classList.toggle('on',x.dataset.route===rt));
+  buildTy();
+}
+function copyTy(id,btn){
+  const ta=document.getElementById(id),text=ta.value,orig=btn.textContent;
+  const ok=()=>{btn.textContent='✓ 已複製！';btn.className='cpbtn ok';setTimeout(()=>{btn.textContent=orig;btn.className='cpbtn';},2000);};
+  const fallback=()=>{ta.select();try{document.execCommand('copy');ok();}catch(e){alert('瀏覽器阻擋複製，請手動全選複製喔！');}};
+  if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(text).then(ok).catch(fallback);}
+  else fallback();
+}
+document.querySelectorAll('[data-h]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('[data-h]').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');
+  const ty=b.dataset.h==='ty';
+  document.getElementById('helpImg').classList.toggle('hidden',ty);
+  document.getElementById('helpTy').classList.toggle('hidden',!ty);
+}));
+document.querySelectorAll('[data-emo]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('[data-emo]').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');tyEmotion=b.dataset.emo;buildTy();
+}));
+document.querySelectorAll('[data-aes]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('[data-aes]').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');tyAes=b.dataset.aes;
+  setTyRoute(TY_DATA.aesthetics[tyAes].route); // Preset 決定流程：風格帶入建議路線，之後仍可手動切換
+}));
+document.querySelectorAll('[data-route]').forEach(b=>b.addEventListener('click',()=>setTyRoute(b.dataset.route)));
+document.querySelectorAll('[data-tyt]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('[data-tyt]').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');tyTool=b.dataset.tyt;buildTy();
+}));
+document.getElementById('tyText').addEventListener('input',buildTy);
+
+// ══════════════════════════════════════════════════════════
 // EVENT BINDINGS
 // ══════════════════════════════════════════════════════════
 // Quick-apply helpers
@@ -837,6 +993,7 @@ new ResizeObserver(()=>schedule()).observe(document.querySelector('.pv'));
 // Init
 refresh();
 buildPH();
+buildTy();
 // Sync default tool button to 'other'
 document.querySelectorAll('[data-tool]').forEach(b=>{
   b.classList.toggle('on', b.dataset.tool==='other');
