@@ -6,7 +6,7 @@
 
 ## 起點
 
-這個專案不是從「我要寫一個工具」開始的，而是從「/sticker 不寄台灣，能不能繞過去」這個問題開始的。從 Claude 畫了幾張貼紙草圖，到最後輸出一個 820 行的 `index.html`，整個過程是三個 AI（Claude、ChatGPT、Gemini）跟一個人（Doe）透過對話把產品規格一輪一輪收斂出來的。
+這個專案不是從「我要寫一個工具」開始的，而是從「/sticker 不寄台灣，能不能繞過去」這個問題開始的。從 Claude 畫了幾張貼紙草圖，到最後輸出一個單檔 `index.html`（初版 820 行，目前約 970 行），整個過程是三個 AI（Claude、ChatGPT、Gemini）跟一個人（Doe）透過對話把產品規格一輪一輪收斂出來的。
 
 這份文件記錄幾個比較值得留下來的決策。
 
@@ -97,6 +97,68 @@ function rrPath(ctx, x, y, w, h, r) {
 
 ---
 
+## Typography Sticker：資料與函數分離的 Prompt Engine
+
+文字貼紙（2026-07-19）是 StickerBoard 的第二條創作軸。定位刻意不是「模板機」，而是「一句話 → AI 理解 → 設計感貼紙」，所以架構上做了三件事：
+
+**1. 三個維度解耦**
+
+```
+Emotion（情緒）    控制心情，不控制角色
+Aesthetic（風格）  控制視覺，不控制角色
+Route（路線）      控制生成策略，不控制內容
+```
+
+情緒和風格是自由組合的（5 × 4），不會出現「梗圖就一定厭世」這種綁死。
+
+**2. 純資料 + 純函數，為抽檔預留**
+
+所有可調內容集中在 `TY_DATA`（emotions / aesthetics / overrides）和 `TY_TAIL`（各工具的尾綴），組裝邏輯是一個沒有 DOM 依賴的純函數：
+
+```javascript
+tyAssemble(recipe, tool) → { route:'A', a } | { route:'B', b1, b2 }
+// recipe = { text, emotion, aesthetic, route }
+```
+
+DOM 那一層（`buildTy()` 和事件綁定）另外放。等 Product B（LINE Helper）開工時，`TY_DATA` + `tyAssemble` 可以原封不動搬進 `shared/recipe-data.js` / `shared/recipe.js` 兩條產品線共用，`index.html` 只留 UI glue。
+
+`TY_DATA.overrides` 是逃生口：某個「情緒|風格」組合出圖不佳時，用 `'meltdown|ink': { a, b1, b2 }` 覆蓋掉預設模板，不必動架構。
+
+**3. Route A / Route B，而不是「GPT 模式 / Gemini 模式」**
+
+模型只是執行者，不該寫進產品架構。所以路線是按生成策略分的：
+
+- **Route A 圖文融合** — 文字直接進 prompt，AI 一次畫完。融合度最高，適合單張梗圖貼紙。
+- **Route B 圖字分離** — Step 1 生「中間留白、絕對不要有文字」的底圖，Step 2 在同一段對話裡加字。字比較不容易翻車，適合長句和文青風。
+
+風格會帶入建議路線（`aesthetics[x].route`，例如水墨預設走 B），但使用者仍可手動切換——Preset 決定的是流程，不是情緒。
+
+已知限制寫在 UI 提示裡：Midjourney 中文字支援不佳，而且無法對同一張圖續改，Route B 的 Step 2 會提示改用 ChatGPT / Gemini。
+
+完整藍圖（含 Layer 4 Character Preference、Typography v2/v3 範圍）見 `stickerboard architecture notes.md`。
+
+---
+
+## 三欄式版面：搬 DOM 而不是複製 DOM
+
+寬螢幕上左欄要同時塞排版設定和 AI 助手，捲動距離太長。解法是加一個 300px 的右欄 `<aside id="rpanel">`，寬螢幕時把 AI 助手整塊搬過去：
+
+```javascript
+const mqWide = matchMedia('(min-width:1101px)');
+function placeAI(){
+  const ai = document.getElementById('aiSec');
+  if (mqWide.matches) document.getElementById('rpanel').appendChild(ai);
+  else { const imgSec = document.getElementById('imgSec');
+         imgSec.parentNode.insertBefore(ai, imgSec); }   // 搬回左欄原位
+}
+mqWide.addEventListener('change', placeAI);
+placeAI();
+```
+
+關鍵是 `appendChild` 移動的是同一個節點，不是兩份 HTML 各寫一次。所有 `id` 唯一、事件綁定不需要重綁，也不會有「窄螢幕改了設定、寬螢幕看到舊值」的雙份狀態問題。<1100px 時搬回左欄，手機版直排行為完全不變。
+
+---
+
 ## Clipboard API 修正
 
 第一版的複製邏輯在本地 `file://` 環境下失效，原因是：
@@ -144,12 +206,12 @@ class DivChecker(HTMLParser):
 
 ---
 
-## 現況
+## 現況（2026-07-19）
 
 | 項目 | 數值 |
 |------|------|
-| 檔案數 | 4（index.html / README.md / TECH.md / .gitignore） |
-| index.html 行數 | 820 |
+| 檔案數 | 7（index.html / README.md / TECH.md / CHANGELOG.md / stickerboard architecture notes.md / LICENSE / .gitignore） |
+| index.html 行數 | 967 |
 | 外部依賴 | 0 |
 | 使用的瀏覽器 API | Canvas 2D、File API、Clipboard API、ResizeObserver、URL.createObjectURL |
 | 支援格式輸入 | JPG / PNG / WebP / GIF |

@@ -25,12 +25,18 @@ Upload your AI-generated images, pick a print format, and download a PNG ready t
 - Background color per cell (white, transparent, or custom)
 - Fill mode: Cover (crop to fill) or Contain (show whole image)
 
-**AI 生圖助手 (Prompt Helper)**
+**AI 生圖助手 (Prompt Helper) — 圖像貼紙 tab**
 - 7 style presets: cartoon, watercolor, Ghibli, minimal, realistic, pixel, stamp
 - 5 tool templates: Universal / ChatGPT / Gemini / Midjourney / Flux·SD
 - 📸 Photo reference mode: generates prompts that ask the AI to reference an uploaded photo (for avatar/pet stickers)
 - Dynamic recommended image size based on your current sticker settings
 - One-click copy with `isSecureContext`-aware clipboard fallback
+
+**文字貼紙 (Typography Sticker v1) — 第二個 tab**
+- Say it in one sentence, get a designed text sticker prompt — not a template filler
+- Emotion (厭世 / 崩潰 / 熱血 / 治癒 / 文青) × Aesthetic (粗體梗圖 / 漫畫標語 / 東方水墨 / 可愛貼紙), fully decoupled
+- Two generation routes: **Route A** (text baked into the image, one prompt) or **Route B** (background first, text added in a second step) — picking a style suggests a route, you can still override
+- Per-tool notes, incl. Midjourney's CJK-text and follow-up-edit limitations
 
 **Print quality**
 - Image quality indicator 🟢🟡🔴 based on print resolution
@@ -81,7 +87,7 @@ This project started from a very specific question:
 
 > *"Can Claude's `/sticker` command send stickers to Taiwan?"*
 
-The answer was no. But that conversation about workarounds became a Claude-generated sticker designer, which became a layout tool, which became a full print-ready generator — spec'd across three AI conversations and iterated into an 820-line single HTML file.
+The answer was no. But that conversation about workarounds became a Claude-generated sticker designer, which became a layout tool, which became a full print-ready generator — spec'd across three AI conversations and iterated into a single HTML file (~970 lines today).
 
 **From sticker, to sticker.**
 
@@ -93,7 +99,8 @@ Created by **Doe**.
 
 Product design and feature spec were collaboratively discussed with Claude (Anthropic), ChatGPT (OpenAI), and Gemini (Google) — each bringing a different angle to the same problem. The final implementation lives in one `index.html`.
 
-See [TECH.md](TECH.md) for architecture notes and design decisions.
+See [TECH.md](TECH.md) for architecture notes and design decisions, and
+[stickerboard architecture notes.md](stickerboard%20architecture%20notes.md) for the forward-looking blueprint (product lines, Prompt Engine, Route A/B).
 
 ---
 
