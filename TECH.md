@@ -210,7 +210,7 @@ class DivChecker(HTMLParser):
 
 | 項目 | 數值 |
 |------|------|
-| 檔案數 | 7（index.html / README.md / TECH.md / CHANGELOG.md / stickerboard architecture notes.md / LICENSE / .gitignore） |
+| 檔案數 | 10（index.html / README.md / TECH.md / CHANGELOG.md / stickerboard architecture notes.md / LICENSE / .gitignore ＋ docs/ 三份交接文件） |
 | index.html 行數 | 978 |
 | 外部依賴 | 0 |
 | 使用的瀏覽器 API | Canvas 2D、File API、Clipboard API、ResizeObserver、URL.createObjectURL |

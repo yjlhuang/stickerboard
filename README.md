@@ -102,6 +102,11 @@ Product design and feature spec were collaboratively discussed with Claude (Anth
 See [TECH.md](TECH.md) for architecture notes and design decisions, and
 [stickerboard architecture notes.md](stickerboard%20architecture%20notes.md) for the forward-looking blueprint (product lines, Prompt Engine, Route A/B).
 
+繁體中文文件（`docs/`）：
+- [使用指南](docs/使用指南.md) — 給完全不懂程式的使用者，從生圖到 ibon 列印的完整步驟
+- [目前進度與未來展望](docs/進度與展望.md) — 里程碑、待辦、長期構想
+- [給下一個 LLM 的交接](docs/LLM交接.md) — 開工必讀、程式碼地圖、地雷區
+
 ---
 
 ## License
