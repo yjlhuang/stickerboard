@@ -206,12 +206,12 @@ class DivChecker(HTMLParser):
 
 ---
 
-## 現況（2026-07-22 · v0.3.0）
+## 現況（2026-07-22 · v0.3.1）
 
 | 項目 | 數值 |
 |------|------|
 | 檔案數 | 7（index.html / README.md / TECH.md / CHANGELOG.md / stickerboard architecture notes.md / LICENSE / .gitignore） |
-| index.html 行數 | 972 |
+| index.html 行數 | 978 |
 | 外部依賴 | 0 |
 | 使用的瀏覽器 API | Canvas 2D、File API、Clipboard API、ResizeObserver、URL.createObjectURL |
 | 支援格式輸入 | JPG / PNG / WebP / GIF |

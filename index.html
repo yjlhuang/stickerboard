@@ -121,7 +121,8 @@ input[type=range]{width:100%;accent-color:var(--primary);cursor:pointer}
 .tapbtn{display:inline-block;margin-top:5px;padding:3px 10px;background:var(--primary);color:#fff;border:none;border-radius:5px;font-size:11.5px;font-weight:600;cursor:pointer;transition:background .12s}
 .tapbtn:hover{background:#4444D4}
 /* ─ modal ─ */
-.moval{position:fixed;inset:0;background:rgba(15,15,25,.52);z-index:200;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(2px)}
+/* 預設不顯示，由 JS 判斷是否首次造訪再開（顯示時設 display:flex） */
+.moval{position:fixed;inset:0;background:rgba(15,15,25,.52);z-index:200;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(2px)}
 .mcard{background:#fff;border-radius:20px;padding:28px 24px 22px;max-width:356px;width:100%;box-shadow:0 24px 64px rgba(0,0,0,.22);position:relative}
 .mcard-x{position:absolute;top:14px;right:16px;background:none;border:none;font-size:18px;color:var(--hint);cursor:pointer;line-height:1;padding:4px 6px}
 .mcard-x:hover{color:var(--text)}
@@ -173,7 +174,7 @@ input[type=range]{width:100%;accent-color:var(--primary);cursor:pointer}
 <header>
   <div class="brand">Sticker<span>Board</span></div>
   <div class="tagline">AI 貼紙排版工具</div>
-  <div class="ver">v0.3.0<span class="ver-d"> · 2026-07-22</span></div>
+  <div class="ver">v0.3.1<span class="ver-d"> · 2026-07-22</span></div>
   <button class="help-btn" onclick="openModal()">💡 教學</button>
   <button class="sp-btn" onclick="openSponsor()">☕ 贊助</button>
 </header>
@@ -918,10 +919,16 @@ function applyCircle(){
   schedule();
   document.getElementById('cr').scrollIntoView({behavior:'smooth',block:'center'});
 }
-// Modal
+// Modal（歡迎彈窗只在首次造訪自動跳；「💡 教學」按鈕隨時可手動開）
+// localStorage 在部分 file:// 情境會丟例外，包 try/catch：失敗就當作沒看過，
+// 頂多每次都跳，不會讓頁面壞掉。
+const SEEN_KEY='sb_welcome_seen';
+function welcomeSeen(){try{return localStorage.getItem(SEEN_KEY)==='1'}catch(e){return false}}
+function markWelcomeSeen(){try{localStorage.setItem(SEEN_KEY,'1')}catch(e){}}
 function openModal(){document.getElementById('moval').style.display='flex';}
-function closeModal(){document.getElementById('moval').style.display='none';}
+function closeModal(){document.getElementById('moval').style.display='none';markWelcomeSeen();}
 function handleModalBg(e){if(e.target===document.getElementById('moval'))closeModal();}
+if(!welcomeSeen())openModal();
 // Sponsor
 function openSponsor(){document.getElementById('soval').classList.add('open');}
 function closeSponsor(){document.getElementById('soval').classList.remove('open');}
