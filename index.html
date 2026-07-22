@@ -164,7 +164,8 @@ input[type=range]{width:100%;accent-color:var(--primary);cursor:pointer}
   .app{flex-direction:column;overflow:visible}
   .panel{width:100%;overflow:visible;border-right:none;border-bottom:1px solid var(--bd)}
   .pv{min-height:50vw;padding:12px}
-  .tagline{display:none}   /* 窄螢幕讓位給版本號 */
+  .tagline{display:none}    /* 窄螢幕讓位給版本號 */
+  .ver-d{display:none}      /* 版本號只留 vX.Y.Z，360px 手機才不會擠爆 header */
 }
 </style>
 </head>
@@ -172,7 +173,7 @@ input[type=range]{width:100%;accent-color:var(--primary);cursor:pointer}
 <header>
   <div class="brand">Sticker<span>Board</span></div>
   <div class="tagline">AI 貼紙排版工具</div>
-  <div class="ver">v0.3.0 · 2026-07-22</div>
+  <div class="ver">v0.3.0<span class="ver-d"> · 2026-07-22</span></div>
   <button class="help-btn" onclick="openModal()">💡 教學</button>
   <button class="sp-btn" onclick="openSponsor()">☕ 贊助</button>
 </header>
